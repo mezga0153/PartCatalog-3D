@@ -1,5 +1,7 @@
 # PartCatalog 3D 📦🔧
 
+🌐 **[Live Demo](https://your-username.github.io/your-repo-name)** - Try it now!
+
 A Three.js-powered 3D model analyzer that transforms your GLB files into a comprehensive parts catalog. Perfect for makers, engineers, and builders who need to understand what components are required to build the actual object their 3D model represents! 🎯
 
 ## What Does This Thing Do? 🤔
