@@ -25,12 +25,182 @@ class ToolbarManager {
             backdrop-filter: blur(5px);
         `;
         
+        this.createOpenFileButton();
         this.createResetButton();
         this.createExplodeButton();
         
+        this.toolbar.appendChild(this.openFileBtn);
         this.toolbar.appendChild(this.resetCameraBtn);
         this.toolbar.appendChild(this.explodeBtn);
         document.body.appendChild(this.toolbar);
+    }
+    
+    createOpenFileButton() {
+        this.openFileBtn = document.createElement('button');
+        this.openFileBtn.className = 'btn btn-sm btn-outline-light';
+        this.openFileBtn.innerHTML = '<i class="bi bi-folder2-open"></i>';
+        this.openFileBtn.title = 'Open GLB File';
+        this.openFileBtn.style.cssText = `
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Create hidden file input
+        this.fileInput = document.createElement('input');
+        this.fileInput.type = 'file';
+        this.fileInput.accept = '.glb';
+        this.fileInput.style.display = 'none';
+        document.body.appendChild(this.fileInput);
+        
+        this.openFileBtn.onclick = () => {
+            this.fileInput.click();
+        };
+        
+        // Handle file selection
+        this.fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                this.handleFileLoad(file);
+            }
+            // Clear the input so the same file can be selected again
+            event.target.value = '';
+        });
+        
+        this.openFileBtn.addEventListener('mouseenter', () => {
+            this.openFileBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+        });
+        
+        this.openFileBtn.addEventListener('mouseleave', () => {
+            this.openFileBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+        });
+    }
+    
+    handleFileLoad(file) {
+        // Validate file type
+        if (!file.name.toLowerCase().endsWith('.glb')) {
+            alert('Please select a valid GLB file.');
+            return;
+        }
+        
+        // Validate file size (max 100MB)
+        const maxSize = 100 * 1024 * 1024; // 100MB
+        if (file.size > maxSize) {
+            alert('File is too large. Maximum size is 100MB.');
+            return;
+        }
+        
+        // Show loading state
+        this.setLoadingState(true);
+        
+        const reader = new FileReader();
+        
+        reader.onload = (event) => {
+            try {
+                const arrayBuffer = event.target.result;
+                const blob = new Blob([arrayBuffer]);
+                const url = URL.createObjectURL(blob);
+                
+                // Load the model
+                const loader = new THREE.GLTFLoader();
+                loader.load(
+                    url,
+                    (gltf) => {
+                        URL.revokeObjectURL(url);
+                        
+                        // Get the process function from the global scope
+                        if (window.processLoadedModel) {
+                            window.processLoadedModel(gltf, file.name);
+                        } else {
+                            console.error('processLoadedModel function not available');
+                        }
+                        
+                        this.setLoadingState(false);
+                        this.showSuccessMessage(file.name);
+                    },
+                    (progress) => {
+                        // Loading progress could be shown here
+                    },
+                    (error) => {
+                        URL.revokeObjectURL(url);
+                        console.error('Error loading GLB file:', error);
+                        alert('Failed to load GLB file. Please check the file format.');
+                        this.setLoadingState(false);
+                    }
+                );
+            } catch (error) {
+                console.error('Error reading file:', error);
+                alert('Failed to read the file. Please try again.');
+                this.setLoadingState(false);
+            }
+        };
+        
+        reader.onerror = () => {
+            alert('Failed to read the file. Please try again.');
+            this.setLoadingState(false);
+        };
+        
+        reader.readAsArrayBuffer(file);
+    }
+    
+    setLoadingState(isLoading) {
+        if (isLoading) {
+            this.openFileBtn.disabled = true;
+            this.openFileBtn.style.opacity = '0.5';
+            this.openFileBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        } else {
+            this.openFileBtn.disabled = false;
+            this.openFileBtn.style.opacity = '1';
+            this.openFileBtn.innerHTML = '<i class="bi bi-folder2-open"></i>';
+        }
+    }
+    
+    showSuccessMessage(filename) {
+        // Create a temporary success message
+        const successMsg = document.createElement('div');
+        successMsg.style.cssText = `
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: rgba(25, 135, 84, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-family: sans-serif;
+            font-size: 14px;
+            z-index: 2000;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(25, 135, 84, 0.5);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.3s ease;
+        `;
+        
+        successMsg.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="bi bi-check-circle-fill"></i>
+                <div>
+                    <div style="font-weight: bold;">File Loaded!</div>
+                    <div style="font-size: 12px; opacity: 0.9;">${filename}</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(successMsg);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            successMsg.style.opacity = '0';
+            setTimeout(() => {
+                if (successMsg.parentNode) {
+                    successMsg.parentNode.removeChild(successMsg);
+                }
+            }, 300);
+        }, 3000);
     }
     
     createResetButton() {

@@ -104,6 +104,9 @@ function initializeViewer() {
         cameraManager.reset();
     }
 
+    // Make processLoadedModel available globally for the toolbar
+    window.processLoadedModel = processLoadedModel;
+
     // Initialize file upload manager
     const fileUploadManager = new FileUploadManager(processLoadedModel);
 
