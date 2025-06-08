@@ -51,26 +51,15 @@ class ToolbarManager {
             justify-content: center;
         `;
         
-        // Create hidden file input
-        this.fileInput = document.createElement('input');
-        this.fileInput.type = 'file';
-        this.fileInput.accept = '.glb';
-        this.fileInput.style.display = 'none';
-        document.body.appendChild(this.fileInput);
-        
         this.openFileBtn.onclick = () => {
-            this.fileInput.click();
-        };
-        
-        // Handle file selection
-        this.fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                this.handleFileLoad(file);
+            // Show the upload dialog instead of directly opening file input
+            if (window.fileUploadManager) {
+                window.fileUploadManager.show();
+            } else {
+                // Fallback to direct file input if upload manager not available
+                this.showFileInput();
             }
-            // Clear the input so the same file can be selected again
-            event.target.value = '';
-        });
+        };
         
         this.openFileBtn.addEventListener('mouseenter', () => {
             this.openFileBtn.style.background = 'rgba(255, 255, 255, 0.2)';
@@ -79,6 +68,27 @@ class ToolbarManager {
         this.openFileBtn.addEventListener('mouseleave', () => {
             this.openFileBtn.style.background = 'rgba(255, 255, 255, 0.1)';
         });
+    }
+    
+    showFileInput() {
+        // Fallback method - create temporary file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.glb';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+        
+        fileInput.onclick = () => fileInput.click();
+        
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                this.handleFileLoad(file);
+            }
+            document.body.removeChild(fileInput);
+        });
+        
+        fileInput.click();
     }
     
     handleFileLoad(file) {

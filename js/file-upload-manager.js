@@ -7,6 +7,7 @@ class FileUploadManager {
         this.fileInput = null;
         this.progressBar = null;
         this.errorMessage = null;
+        this.demoBtn = null;
         
         this.createUploadDialog();
         this.setupEventListeners();
@@ -22,6 +23,10 @@ class FileUploadManager {
         this.dialog.className = 'file-upload-dialog';
         
         this.dialog.innerHTML = `
+            <button type="button" class="file-upload-close" id="closeBtn">
+                <i class="bi bi-x"></i>
+            </button>
+            <div class="file-upload-brand">PartCatalog 3D</div>
             <div class="file-upload-title">Load 3D Model</div>
             <div class="file-upload-subtitle">Select a GLB file to view and analyze</div>
             
@@ -34,9 +39,15 @@ class FileUploadManager {
             </div>
             
             <input type="file" id="fileInput" class="file-input" accept=".glb">
-            <button type="button" class="file-browse-btn" id="browseBtn">
-                <i class="bi bi-folder2-open"></i> Browse Files
-            </button>
+            
+            <div class="file-upload-buttons">
+                <button type="button" class="file-browse-btn" id="browseBtn">
+                    <i class="bi bi-folder2-open"></i> Browse Files
+                </button>
+                <button type="button" class="file-demo-btn" id="demoBtn">
+                    <i class="bi bi-play-circle"></i> View Demo
+                </button>
+            </div>
             
             <div class="file-upload-progress" id="uploadProgress">
                 <div class="progress-bar">
@@ -54,15 +65,30 @@ class FileUploadManager {
         this.dropZone = document.getElementById('dropZone');
         this.fileInput = document.getElementById('fileInput');
         this.browseBtn = document.getElementById('browseBtn');
+        this.demoBtn = document.getElementById('demoBtn');
+        this.closeBtn = document.getElementById('closeBtn');
         this.progressBar = document.getElementById('uploadProgress');
         this.progressFill = document.getElementById('progressFill');
         this.errorMessage = document.getElementById('errorMessage');
+        
+        // Show the dialog on startup instead of hiding it
+        this.show();
     }
     
     setupEventListeners() {
+        // Close button
+        this.closeBtn.addEventListener('click', () => {
+            this.close();
+        });
+        
         // Browse button
         this.browseBtn.addEventListener('click', () => {
             this.fileInput.click();
+        });
+        
+        // Demo button
+        this.demoBtn.addEventListener('click', () => {
+            this.loadDemo();
         });
         
         // Drop zone click
@@ -100,18 +126,39 @@ class FileUploadManager {
         });
         
         // Prevent default drag behaviors on document
-        document.addEventListener('dragover', (event) => {
-            event.preventDefault();
-        });
+        document.addEventListener('dragover', (e) => e.preventDefault());
+        document.addEventListener('drop', (e) => e.preventDefault());
+    }
+    
+    loadDemo() {
+        const loader = new THREE.GLTFLoader();
+        const demoUrl = './demo.glb'; // Load from project root
         
-        document.addEventListener('drop', (event) => {
-            event.preventDefault();
-        });
+        this.showProgress();
+        this.hideError();
+        
+        loader.load(
+            demoUrl,
+            (gltf) => {
+                this.hideProgress();
+                this.onFileLoaded(gltf, 'demo.glb');
+                this.close();
+            },
+            (progress) => {
+                if (progress.lengthComputable) {
+                    const percentage = (progress.loaded / progress.total) * 100;
+                    this.updateProgress(percentage);
+                }
+            },
+            (error) => {
+                this.hideProgress();
+                this.showError('Failed to load demo model. Please check that demo.glb exists in the project root.');
+                console.error('Demo load error:', error);
+            }
+        );
     }
     
     handleFile(file) {
-        this.hideError();
-        
         // Validate file type
         if (!file.name.toLowerCase().endsWith('.glb')) {
             this.showError('Please select a valid GLB file.');
@@ -125,57 +172,39 @@ class FileUploadManager {
             return;
         }
         
-        this.showProgress();
         this.loadFile(file);
     }
     
     loadFile(file) {
-        const reader = new FileReader();
+        this.showProgress();
+        this.hideError();
         
-        reader.onprogress = (event) => {
-            if (event.lengthComputable) {
-                const progress = (event.loaded / event.total) * 100;
-                this.updateProgress(progress);
-            }
-        };
+        const reader = new FileReader();
         
         reader.onload = (event) => {
             try {
                 const arrayBuffer = event.target.result;
-                const blob = new Blob([arrayBuffer]);
-                const url = URL.createObjectURL(blob);
-                
-                // Load the model
                 const loader = new THREE.GLTFLoader();
-                loader.load(
-                    url,
-                    (gltf) => {
-                        URL.revokeObjectURL(url);
-                        this.onFileLoaded(gltf, file.name);
-                        this.close();
-                    },
-                    (progress) => {
-                        // Loading progress
-                        const percentage = (progress.loaded / progress.total) * 100;
-                        this.updateProgress(percentage);
-                    },
-                    (error) => {
-                        URL.revokeObjectURL(url);
-                        console.error('Error loading GLB file:', error);
-                        this.showError('Failed to load GLB file. Please check the file format.');
-                        this.hideProgress();
-                    }
-                );
+                
+                loader.parse(arrayBuffer, '', (gltf) => {
+                    this.hideProgress();
+                    this.onFileLoaded(gltf, file.name);
+                    this.close();
+                }, (error) => {
+                    this.hideProgress();
+                    this.showError('Failed to parse GLB file. Please check the file format.');
+                    console.error('GLB parse error:', error);
+                });
             } catch (error) {
-                console.error('Error reading file:', error);
-                this.showError('Failed to read the file. Please try again.');
                 this.hideProgress();
+                this.showError('Failed to read the file. Please try again.');
+                console.error('File read error:', error);
             }
         };
         
         reader.onerror = () => {
-            this.showError('Failed to read the file. Please try again.');
             this.hideProgress();
+            this.showError('Failed to read the file. Please try again.');
         };
         
         reader.readAsArrayBuffer(file);
@@ -191,7 +220,7 @@ class FileUploadManager {
     }
     
     updateProgress(percentage) {
-        this.progressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
+        this.progressFill.style.width = `${percentage}%`;
     }
     
     showError(message) {
@@ -204,20 +233,14 @@ class FileUploadManager {
     }
     
     close() {
-        if (this.overlay && this.overlay.parentNode) {
-            this.overlay.parentNode.removeChild(this.overlay);
-        }
+        this.hide();
     }
     
     show() {
-        if (this.overlay) {
-            this.overlay.style.display = 'flex';
-        }
+        this.overlay.style.display = 'flex';
     }
     
     hide() {
-        if (this.overlay) {
-            this.overlay.style.display = 'none';
-        }
+        this.overlay.style.display = 'none';
     }
 }
