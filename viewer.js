@@ -105,30 +105,7 @@ function initializeViewer() {
     }
 
     // Initialize file upload manager
-    const fileUploadManager = new FileUploadManager((model) => {
-        // Clear existing meshes
-        Alpine.store('meshStore').meshes = [];
-        scene.clear();
-        
-        // Process the new model
-        const meshes = meshManager.processModel(model);
-        
-        // Add meshes to scene and UI
-        meshes.forEach(mesh => {
-            scene.add(mesh.threeMesh);
-            Alpine.store('meshStore').addMesh(mesh);
-        });
-        
-        console.log(`Loaded ${meshes.length} meshes`);
-    });
-    
-    // Make it globally accessible for toolbar
-    window.fileUploadManager = fileUploadManager;
-    
-    // Auto-load demo on first visit
-    setTimeout(() => {
-        fileUploadManager.loadDemo();
-    }, 1000);
+    const fileUploadManager = new FileUploadManager(processLoadedModel);
 
     // Animation loop
     const animate = () => {

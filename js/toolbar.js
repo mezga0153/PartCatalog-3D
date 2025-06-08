@@ -12,47 +12,52 @@ class ToolbarManager {
     
     createToolbar() {
         this.toolbar = document.createElement('div');
-        this.toolbar.style.position = 'absolute';
-        this.toolbar.style.top = '10px';
-        this.toolbar.style.right = '10px';
-        this.toolbar.style.zIndex = '1000';
-        this.toolbar.style.display = 'flex';
-        this.toolbar.style.gap = '8px';
+        this.toolbar.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 6px;
+            backdrop-filter: blur(5px);
+        `;
         
-        this.createLoadFileButton();
         this.createResetButton();
         this.createExplodeButton();
         
+        this.toolbar.appendChild(this.resetCameraBtn);
+        this.toolbar.appendChild(this.explodeBtn);
         document.body.appendChild(this.toolbar);
     }
     
-    createLoadFileButton() {
-        this.loadFileBtn = document.createElement('button');
-        this.loadFileBtn.className = 'btn btn-sm btn-outline-light';
-        this.loadFileBtn.innerHTML = '<i class="bi bi-folder-open"></i> Load File';
-        this.loadFileBtn.title = 'Load a new GLB file';
-        
-        this.loadFileBtn.addEventListener('click', () => {
-            // Show the file upload dialog
-            if (window.fileUploadManager) {
-                window.fileUploadManager.show();
-            }
-        });
-        
-        this.toolbar.appendChild(this.loadFileBtn);
-    }
-    
     createResetButton() {
-        this.resetBtn = document.createElement('button');
-        this.resetBtn.className = 'btn btn-sm btn-outline-light';
-        this.resetBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Reset View';
-        this.resetBtn.title = 'Reset camera to default position';
+        this.resetCameraBtn = document.createElement('button');
+        this.resetCameraBtn.className = 'btn btn-sm btn-outline-light';
+        this.resetCameraBtn.innerHTML = '<i class="bi bi-house"></i>';
+        this.resetCameraBtn.title = 'Reset Camera';
+        this.resetCameraBtn.style.cssText = `
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
         
-        this.resetBtn.addEventListener('click', () => {
-            this.cameraManager.reset();
+        this.resetCameraBtn.onclick = () => this.cameraManager.reset();
+        
+        this.resetCameraBtn.addEventListener('mouseenter', () => {
+            this.resetCameraBtn.style.background = 'rgba(255, 255, 255, 0.2)';
         });
         
-        this.toolbar.appendChild(this.resetBtn);
+        this.resetCameraBtn.addEventListener('mouseleave', () => {
+            this.resetCameraBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+        });
     }
     
     createExplodeButton() {
