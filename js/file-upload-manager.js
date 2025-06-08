@@ -20,43 +20,58 @@ class FileUploadManager {
         // Create dialog
         this.dialog = document.createElement('div');
         this.dialog.className = 'file-upload-dialog';
-        
         this.dialog.innerHTML = `
-            <div class="file-upload-title">Load 3D Model</div>
-            <div class="file-upload-subtitle">Select a GLB file to view and analyze</div>
-            
-            <div class="file-drop-zone" id="dropZone">
-                <div class="file-drop-icon">
-                    <i class="bi bi-cloud-upload"></i>
+            <div class="file-upload-content">
+                <h3 class="file-upload-title">Welcome to PartCatalog 3D</h3>
+                <p class="file-upload-subtitle">Analyze 3D models and generate parts catalogs</p>
+                
+                <div class="demo-options">
+                    <button class="btn btn-primary demo-btn" id="loadDemoBtn">
+                        <i class="bi bi-play-circle"></i>
+                        Try the Demo
+                    </button>
+                    <p class="demo-text">Load a sample model to see PartCatalog 3D in action</p>
                 </div>
-                <div class="file-drop-text">Drop your GLB file here</div>
-                <div class="file-drop-subtext">or click to browse</div>
-            </div>
-            
-            <input type="file" id="fileInput" class="file-input" accept=".glb">
-            <button type="button" class="file-browse-btn" id="browseBtn">
-                <i class="bi bi-folder2-open"></i> Browse Files
-            </button>
-            
-            <div class="file-upload-progress" id="uploadProgress">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
+                
+                <div class="divider">
+                    <span>or</span>
                 </div>
+                
+                <div class="file-drop-zone" id="dropZone">
+                    <div class="file-drop-icon">
+                        <i class="bi bi-cloud-upload"></i>
+                    </div>
+                    <div class="file-drop-text">Drop your GLB file here</div>
+                    <div class="file-drop-subtext">or click to browse</div>
+                    <input type="file" class="file-input" id="fileInput" accept=".glb,.gltf">
+                </div>
+                
+                <button class="file-browse-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+                
+                <div class="file-upload-progress" id="progressContainer" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+                
+                <div class="error-message" id="errorMessage" style="display: none;"></div>
             </div>
-            
-            <div class="error-message" id="errorMessage"></div>
         `;
         
         this.overlay.appendChild(this.dialog);
         document.body.appendChild(this.overlay);
         
-        // Get references to elements
+        // Get references
         this.dropZone = document.getElementById('dropZone');
         this.fileInput = document.getElementById('fileInput');
-        this.browseBtn = document.getElementById('browseBtn');
-        this.progressBar = document.getElementById('uploadProgress');
-        this.progressFill = document.getElementById('progressFill');
+        this.progressBar = document.getElementById('progressContainer');
         this.errorMessage = document.getElementById('errorMessage');
+        
+        // Add demo button handler
+        const demoBtn = document.getElementById('loadDemoBtn');
+        demoBtn.addEventListener('click', () => this.loadDemo());
     }
     
     setupEventListeners() {
@@ -71,42 +86,65 @@ class FileUploadManager {
         });
         
         // File input change
-        this.fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                this.handleFile(file);
+        this.fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleFile(e.target.files[0]);
             }
         });
         
-        // Drag and drop events
-        this.dropZone.addEventListener('dragover', (event) => {
-            event.preventDefault();
+        // Drop zone events
+        this.dropZone.addEventListener('click', () => {
+            this.fileInput.click();
+        });
+        
+        this.dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
             this.dropZone.classList.add('drag-over');
         });
         
-        this.dropZone.addEventListener('dragleave', (event) => {
-            event.preventDefault();
+        this.dropZone.addEventListener('dragleave', () => {
             this.dropZone.classList.remove('drag-over');
         });
         
-        this.dropZone.addEventListener('drop', (event) => {
-            event.preventDefault();
+        this.dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
             this.dropZone.classList.remove('drag-over');
             
-            const files = event.dataTransfer.files;
+            const files = e.dataTransfer.files;
             if (files.length > 0) {
                 this.handleFile(files[0]);
             }
         });
-        
-        // Prevent default drag behaviors on document
-        document.addEventListener('dragover', (event) => {
-            event.preventDefault();
-        });
-        
-        document.addEventListener('drop', (event) => {
-            event.preventDefault();
-        });
+    }
+    
+    async loadDemo() {
+        try {
+            this.showProgress();
+            
+            // Load the demo GLB file
+            const response = await fetch('demo.glb');
+            if (!response.ok) {
+                throw new Error('Demo file not found');
+            }
+            
+            const arrayBuffer = await response.arrayBuffer();
+            const blob = new Blob([arrayBuffer], { type: 'model/gltf-binary' });
+            
+            // Create a fake file object for consistency
+            const demoFile = new File([blob], 'demo.glb', { type: 'model/gltf-binary' });
+            
+            this.updateProgress(50);
+            await this.loadFile(demoFile);
+            this.updateProgress(100);
+            
+            setTimeout(() => {
+                this.hide();
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error loading demo:', error);
+            this.showError('Failed to load demo file. Please try uploading your own GLB file.');
+        }
     }
     
     handleFile(file) {
