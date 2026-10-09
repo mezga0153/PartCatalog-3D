@@ -78,7 +78,7 @@ function initializeViewer() {
             if (child.isMesh && child.geometry) {
                 const filteredVertices = meshManager.getFilteredVertices(child);
                 const originalVertexCount = child.geometry?.attributes?.position?.count;
-                const boxInfo = meshManager.extractBoxFromGeometry(filteredVertices, child.name, originalVertexCount);
+                const boxInfo = meshManager.extractBoxFromGeometry(filteredVertices, meshManager.getPartName(child), originalVertexCount);
                 
                 if (boxInfo) {
                     const materialName = child.material ? (child.material.name || 'Unnamed Material') : 'No Material';

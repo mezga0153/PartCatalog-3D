@@ -125,6 +125,20 @@ class MeshManager {
         return this.meshVertices.get(mesh) || [];
     }
     
+    // Display name for a mesh. Multi-primitive glTF meshes become a Group (named
+    // after the node) holding auto-named children like "mesh_0_1", so prefer the
+    // original glTF node name of the mesh itself or of that group.
+    getPartName(mesh) {
+        if (mesh.userData.name) return mesh.userData.name;
+        
+        const parent = mesh.parent;
+        if (parent && parent.isGroup && parent.userData.name && /^mesh_\d+(_\d+)?$/.test(mesh.name)) {
+            return parent.userData.name;
+        }
+        
+        return mesh.name;
+    }
+    
     enhanceMaterials(model) {
         model.traverse((child) => {
             if (child.isMesh) {
