@@ -229,8 +229,14 @@ export class MeshManager {
     }
     
     getPartMaterialName(part) {
-        const names = [...new Set(part.meshes.map(mesh => mesh.material ? (mesh.material.name || 'Unnamed Material') : 'No Material'))];
+        const names = [...new Set(part.meshes.map(mesh => this.getMeshMaterialName(mesh)))];
         return names.join(', ');
+    }
+    
+    // The mesh's own material name, even while the UI shows a highlight material
+    getMeshMaterialName(mesh) {
+        const material = mesh.userData.originalMaterial || mesh.material;
+        return material ? (material.name || 'Unnamed Material') : 'No Material';
     }
     
     // Bounding box of a part's own meshes (excluding any child nodes)
