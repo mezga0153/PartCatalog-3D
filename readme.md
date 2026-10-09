@@ -35,6 +35,7 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 ├── 📄 index.html                # Page layout, import map and CDN scripts
 ├── 📄 viewer.js                 # Main application orchestrator
 ├── 📄 demo.glb                  # Demo model (a small SketchUp cabinet)
+├── 📁 examples/                 # More test models (banding, assemblies, compression, a large model)
 ├── 📁 js/
 │   ├── 🎥 scene.js              # Scene setup, lighting, environment
 │   ├── 📹 camera.js             # Camera controls and framing
