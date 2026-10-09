@@ -59,6 +59,13 @@ test('assemblies come from the node hierarchy or shared name prefixes', async ()
     assert.deepEqual(await app.ev(`[...new Set(window.meshStore.meshes.map(m => m.assembly))]`), [null]);
 });
 
+test('choosing the same file again reloads it', async () => {
+    const file = path.join(EXAMPLES, 'banded-panels.glb');
+    await app.loadFile(file);
+    await app.loadFile(file);
+    assert.equal(await app.ev(`window.meshStore.meshes.length`), 4);
+});
+
 test('names from the model are shown as text, not HTML', async () => {
     await app.loadFile(demoWithNames('<img src=x onerror="window.__injected=1">', '<b onmouseover="window.__injected=2">mat</b>'));
     const names = await app.ev(`[...document.querySelectorAll('#partsPane .part-name')].map(e => e.textContent)`);

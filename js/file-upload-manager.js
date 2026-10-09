@@ -104,6 +104,8 @@ export class FileUploadManager {
             if (file) {
                 this.handleFile(file);
             }
+            // Clear it so choosing the same file again still fires a change
+            event.target.value = '';
         });
         
         // Drag and drop events
