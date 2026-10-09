@@ -67,6 +67,18 @@ export class MeshManager {
             ancestorsOf.set(part, ancestors);
         });
         
+        const prefixOf = (part) => {
+            const match = (part.object.userData.name || part.object.name).match(/^(.+?)\s+[-–:]\s+/);
+            return match ? match[1] : null;
+        };
+        
+        // A name prefix only looks like an assembly if several parts share it
+        const prefixCounts = new Map();
+        this.parts.forEach((part) => {
+            const prefix = prefixOf(part);
+            if (prefix) prefixCounts.set(prefix, (prefixCounts.get(prefix) || 0) + 1);
+        });
+        
         this.parts.forEach((part) => {
             const assemblyNode = ancestorsOf.get(part).find(node =>
                 (node.userData.name || node.name) && partsUnder.get(node) < this.parts.length);
@@ -75,9 +87,9 @@ export class MeshManager {
                 part.assembly = assemblyNode.userData.name || assemblyNode.name;
                 part.assemblyFromName = false;
             } else {
-                const match = (part.object.userData.name || part.object.name).match(/^(.+?)\s+[-–:]\s+/);
-                part.assembly = match ? match[1] : null;
-                part.assemblyFromName = !!match;
+                const prefix = prefixOf(part);
+                part.assembly = prefix && prefixCounts.get(prefix) > 1 ? prefix : null;
+                part.assemblyFromName = !!part.assembly;
             }
         });
     }
