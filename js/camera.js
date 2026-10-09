@@ -23,10 +23,37 @@ class CameraManager {
         };
     }
     
+    // Frame the given object and remember the view for reset()
+    fitToObject(object) {
+        const box = new THREE.Box3().setFromObject(object);
+        if (box.isEmpty()) {
+            this.homeView = null;
+            this.reset();
+            return;
+        }
+        
+        const sphere = box.getBoundingSphere(new THREE.Sphere());
+        const radius = Math.max(sphere.radius, 1e-3);
+        const distance = radius / Math.sin(THREE.MathUtils.degToRad(this.camera.fov) / 2) * 1.4;
+        
+        this.camera.near = distance / 100;
+        this.camera.far = distance * 100;
+        this.camera.updateProjectionMatrix();
+        
+        this.homeView = {
+            target: sphere.center.clone(),
+            position: sphere.center.clone().add(new THREE.Vector3(1, 1, 1).normalize().multiplyScalar(distance))
+        };
+        this.reset();
+    }
+    
     reset() {
-        this.camera.position.set(2, 2, 2);
-        this.camera.lookAt(0, 0, 0);
-        this.controls.target.set(0, 0, 0);
+        const target = this.homeView ? this.homeView.target : new THREE.Vector3(0, 0, 0);
+        const position = this.homeView ? this.homeView.position : new THREE.Vector3(2, 2, 2);
+        
+        this.camera.position.copy(position);
+        this.camera.lookAt(target);
+        this.controls.target.copy(target);
         this.controls.update();
     }
     

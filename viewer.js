@@ -102,7 +102,7 @@ function initializeViewer() {
         document.title = `GLB Box Viewer - ${filename}`;
         
         // Reset camera to fit model
-        cameraManager.reset();
+        cameraManager.fitToObject(model);
     }
 
     // Make processLoadedModel available globally for the toolbar
