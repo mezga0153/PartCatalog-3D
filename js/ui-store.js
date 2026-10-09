@@ -4,6 +4,14 @@ import { modelKey, loadEdits, saveEdits } from './storage.js';
 
 // Shared materials for highlighted and excluded parts
 const selectedMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.1, roughness: 0.7 });
+const fadedMaterial = new THREE.MeshStandardMaterial({
+    color: 0x888888,
+    metalness: 0,
+    roughness: 1,
+    transparent: true,
+    opacity: 0.06,
+    depthWrite: false
+});
 const excludedMaterial = new THREE.MeshStandardMaterial({
     color: 0x888888,
     metalness: 0,
@@ -265,11 +273,22 @@ export const meshStore = {
         
         this.selectedUuids = isSameSelection ? new Set() : new Set(uuids.filter(uuid => this.findMeshByUuid(uuid)));
         
-        new Set([...previous, ...uuids]).forEach(uuid => {
+        // While isolating, every part's look depends on the selection
+        const affected = this.isolate ? this.meshes.map(m => m.uuid) : new Set([...previous, ...uuids]);
+        affected.forEach(uuid => {
             const mesh = this.findMeshByUuid(uuid);
             if (mesh) this.refreshAppearance(mesh);
         });
         
+        this.updateUI();
+    },
+    
+    // Isolate: show the selected parts in their own materials and fade the rest
+    isolate: false,
+    
+    setIsolate(isolate) {
+        this.isolate = isolate;
+        this.meshes.forEach(mesh => this.refreshAppearance(mesh));
         this.updateUI();
     },
     
@@ -278,7 +297,7 @@ export const meshStore = {
         
         const previous = [...this.selectedUuids];
         this.selectedUuids = new Set();
-        previous.forEach(uuid => {
+        (this.isolate ? this.meshes.map(m => m.uuid) : previous).forEach(uuid => {
             const mesh = this.findMeshByUuid(uuid);
             if (mesh) this.refreshAppearance(mesh);
         });
@@ -362,7 +381,11 @@ export const meshStore = {
                 threeMesh.userData.originalMaterial = threeMesh.material;
             }
             
-            if (this.selectedUuids.has(mesh.uuid)) {
+            const isSelected = this.selectedUuids.has(mesh.uuid);
+            
+            if (this.isolate && this.selectedUuids.size > 0) {
+                threeMesh.material = isSelected ? threeMesh.userData.originalMaterial : fadedMaterial;
+            } else if (isSelected) {
                 threeMesh.material = selectedMaterial;
             } else if (!mesh.isIncluded) {
                 threeMesh.material = excludedMaterial;

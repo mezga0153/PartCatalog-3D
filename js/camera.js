@@ -50,6 +50,21 @@ export class CameraManager {
         this.reset();
     }
     
+    // Look at a box from the current direction, close enough to fill the view
+    frameBox(box) {
+        if (box.isEmpty()) return;
+        
+        const sphere = box.getBoundingSphere(new THREE.Sphere());
+        const distance = Math.max(sphere.radius, 1e-3) / Math.sin(THREE.MathUtils.degToRad(this.camera.fov) / 2) * 1.3;
+        const direction = this.camera.position.clone().sub(this.controls.target).normalize();
+        
+        this.camera.near = Math.min(this.camera.near, distance / 100);
+        this.camera.updateProjectionMatrix();
+        this.controls.target.copy(sphere.center);
+        this.camera.position.copy(sphere.center).addScaledVector(direction, distance);
+        this.controls.update();
+    }
+    
     reset() {
         const target = this.homeView ? this.homeView.target : new THREE.Vector3(0, 0, 0);
         const position = this.homeView ? this.homeView.position : new THREE.Vector3(2, 2, 2);

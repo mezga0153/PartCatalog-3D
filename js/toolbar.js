@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { escapeHtml } from './html.js';
 import { createGLTFLoader } from './loader.js';
+import { meshStore } from './ui-store.js';
 
 export class ToolbarManager {
     constructor(cameraManager, meshManager) {
@@ -33,10 +34,12 @@ export class ToolbarManager {
         this.createOpenFileButton();
         this.createResetButton();
         this.createExplodeButton();
+        this.createIsolateButton();
         
         this.toolbar.appendChild(this.openFileBtn);
         this.toolbar.appendChild(this.resetCameraBtn);
         this.toolbar.appendChild(this.explodeBtn);
+        this.toolbar.appendChild(this.isolateBtn);
         document.body.appendChild(this.toolbar);
     }
     
@@ -274,6 +277,44 @@ export class ToolbarManager {
                 this.explodeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
             }
         });
+    }
+    
+    createIsolateButton() {
+        this.isolateBtn = document.createElement('button');
+        this.isolateBtn.className = 'btn btn-sm btn-outline-light';
+        this.isolateBtn.innerHTML = '<i class="bi bi-bullseye"></i>';
+        this.isolateBtn.title = 'Isolate selection (fade other parts)';
+        this.isolateBtn.style.cssText = `
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            min-width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        this.isolateBtn.onclick = () => this.toggleIsolate();
+        
+        // Keep the button state in sync, e.g. after loading another model
+        meshStore.subscribe(() => {
+            this.isolateBtn.style.background = meshStore.isolate ? 'rgba(135, 206, 235, 0.4)' : 'rgba(255, 255, 255, 0.1)';
+        });
+    }
+    
+    toggleIsolate() {
+        meshStore.setIsolate(!meshStore.isolate);
+        
+        // Zoom to the isolated parts
+        if (meshStore.isolate && meshStore.selectedUuids.size > 0) {
+            const box = new THREE.Box3();
+            meshStore.selectedUuids.forEach(uuid => {
+                const entry = meshStore.findMeshByUuid(uuid);
+                if (entry) entry.threeMeshes.forEach(mesh => box.expandByObject(mesh));
+            });
+            this.cameraManager.frameBox(box);
+        }
     }
     
     toggleExplode() {

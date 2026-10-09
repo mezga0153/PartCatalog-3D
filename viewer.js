@@ -86,6 +86,7 @@ function initializeViewer() {
             meshStore.modelKey = null;
             meshStore.meshes = [];
             meshStore.selectedUuids.clear();
+            meshStore.isolate = false;
             meshStore.hideBoundingBoxes();
             meshStore.updateUI();
         }
