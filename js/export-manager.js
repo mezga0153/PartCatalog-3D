@@ -21,7 +21,7 @@ export class ExportManager {
         this.exportBtn = document.createElement('button');
         this.exportBtn.className = 'btn btn-sm btn-outline-light';
         this.exportBtn.innerHTML = '<i class="bi bi-download"></i>';
-        this.exportBtn.title = 'Export Kept Meshes to Excel';
+        this.exportBtn.title = 'Export included parts to Excel';
         this.exportBtn.style.cssText = `
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
@@ -46,7 +46,7 @@ export class ExportManager {
         // Add to toolbar
         toolbar.appendChild(this.exportBtn);
         
-        // Update button state based on kept meshes
+        // Update button state based on included parts
         this.updateButtonState();
         
         console.log('Export button created successfully');
@@ -57,16 +57,16 @@ export class ExportManager {
         
         if (!meshStore) return;
         
-        const keptMeshes = meshStore.meshes.filter(mesh => mesh.isKept);
+        const includedParts = meshStore.meshes.filter(mesh => mesh.isIncluded);
         
-        if (keptMeshes.length === 0) {
+        if (includedParts.length === 0) {
             this.exportBtn.disabled = true;
             this.exportBtn.style.opacity = '0.5';
-            this.exportBtn.title = 'No meshes marked as "Keep" to export';
+            this.exportBtn.title = 'No parts included in the cut list';
         } else {
             this.exportBtn.disabled = false;
             this.exportBtn.style.opacity = '1';
-            this.exportBtn.title = `Export ${keptMeshes.length} kept mesh${keptMeshes.length === 1 ? '' : 'es'} to Excel`;
+            this.exportBtn.title = `Export ${includedParts.length} included part${includedParts.length === 1 ? '' : 's'} to Excel`;
         }
     }
     
@@ -76,16 +76,16 @@ export class ExportManager {
             return;
         }
         
-        const keptMeshes = meshStore.meshes.filter(mesh => mesh.isKept);
+        const includedParts = meshStore.meshes.filter(mesh => mesh.isIncluded);
         
-        if (keptMeshes.length === 0) {
-            alert('No meshes are marked as "Keep". Please mark some meshes before exporting.');
+        if (includedParts.length === 0) {
+            alert('No parts are included in the cut list. Tick some parts before exporting.');
             return;
         }
         
         try {
             // Prepare data for Excel
-            const data = this.prepareExportData(keptMeshes);
+            const data = this.prepareExportData(includedParts);
             
             // Create workbook
             const workbook = XLSX.utils.book_new();
@@ -102,23 +102,22 @@ export class ExportManager {
                 { wch: 30 }, // Full Dimensions
                 { wch: 15 }, // Vertex Count
                 { wch: 25 }, // Material Name
-                { wch: 15 }, // Status
                 { wch: 30 }  // Notes
             ];
             worksheet['!cols'] = columnWidths;
             
             // Add worksheet to workbook
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Kept Meshes');
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Cut List');
             
             // Generate filename with timestamp
             const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-            const filename = `GLB_Kept_Meshes_${timestamp}.xlsx`;
+            const filename = `Cut_List_${timestamp}.xlsx`;
             
             // Save file
             XLSX.writeFile(workbook, filename);
             
             // Show success message
-            this.showExportSuccess(keptMeshes.length, filename);
+            this.showExportSuccess(includedParts.length, filename);
             
         } catch (error) {
             console.error('Export error:', error);
@@ -126,8 +125,8 @@ export class ExportManager {
         }
     }
     
-    prepareExportData(keptMeshes) {
-        return keptMeshes.map((mesh, index) => {
+    prepareExportData(includedParts) {
+        return includedParts.map((mesh, index) => {
             const round = value => Math.round(value * 10) / 10;
             
             return {
@@ -138,8 +137,7 @@ export class ExportManager {
                 'Full Dimensions': mesh.dimensions,
                 'Vertex Count': mesh.vertexCount,
                 'Material Name': mesh.materialName,
-                'Status': 'Keep',
-                'Notes': '', // Empty field for user notes
+                                'Notes': '', // Empty field for user notes
                 'Export Order': index + 1
             };
         });
@@ -171,7 +169,7 @@ export class ExportManager {
                 <div>
                     <div style="font-weight: bold;">Export Successful!</div>
                     <div style="font-size: 12px; opacity: 0.9;">
-                        ${count} mesh${count === 1 ? '' : 'es'} exported to ${filename}
+                        ${count} part${count === 1 ? "" : "s"} exported to ${filename}
                     </div>
                 </div>
             </div>

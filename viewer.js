@@ -100,6 +100,7 @@ function initializeViewer() {
         
         sceneManager.scene.add(model);
         toolbarManager.resetExplodeState();
+        window.exportManager.updateButtonState();
         
         // Update title to show loaded file
         document.title = `GLB Box Viewer - ${filename}`;

@@ -45,6 +45,16 @@ export class PartsTable {
         this.emptyEl = this.container.querySelector('.parts-empty');
         
         const headRow = this.container.querySelector('thead tr');
+        
+        // Include all / none for the rows currently shown
+        const includeTh = document.createElement('th');
+        includeTh.className = 'include';
+        includeTh.innerHTML = '<input type="checkbox" class="form-check-input" title="Include all / none">';
+        this.includeAll = includeTh.querySelector('input');
+        this.includeAll.onchange = () => {
+            this.store.setIncluded(this.getRows().map(m => m.uuid), this.includeAll.checked);
+        };
+        headRow.appendChild(includeTh);
         COLUMNS.forEach(column => {
             const th = document.createElement('th');
             th.dataset.key = column.key;
@@ -109,6 +119,11 @@ export class PartsTable {
             th.textContent = column.label + arrow;
         });
         
+        const includedCount = rows.filter(m => m.isIncluded).length;
+        this.includeAll.checked = rows.length > 0 && includedCount === rows.length;
+        this.includeAll.indeterminate = includedCount > 0 && includedCount < rows.length;
+        this.includeAll.disabled = rows.length === 0;
+        
         this.tbody.innerHTML = '';
         rows.forEach(entry => this.tbody.appendChild(this.createRow(entry)));
         
@@ -121,7 +136,7 @@ export class PartsTable {
         row.className = [
             this.store.selectedMeshUuid === entry.uuid ? 'selected' : '',
             entry.isHidden ? 'is-hidden' : '',
-            entry.isKept ? 'is-kept' : ''
+            entry.isIncluded ? '' : 'is-excluded'
         ].join(' ');
         
         let note = '';
@@ -132,6 +147,7 @@ export class PartsTable {
         }
         
         row.innerHTML = `
+            <td class="include"><input type="checkbox" class="form-check-input" title="Include in cut list" ${entry.isIncluded ? 'checked' : ''}></td>
             <td class="name"><div>${escapeHtml(entry.name)}</div>${note}</td>
             <td class="num">${formatLength(entry.size.length)}</td>
             <td class="num">${formatLength(entry.size.width)}</td>
@@ -140,18 +156,16 @@ export class PartsTable {
             <td class="actions"></td>
         `;
         
+        const checkbox = row.querySelector('.include input');
+        checkbox.onclick = (event) => event.stopPropagation();
+        checkbox.onchange = () => this.store.setIncluded([entry.uuid], checkbox.checked);
+        
         const actions = row.querySelector('.actions');
         actions.appendChild(this.createAction(
             entry.isHidden ? 'bi-eye-slash' : 'bi-eye',
             entry.isHidden ? 'Show part' : 'Hide part',
             () => this.store.toggleVisibility(entry.uuid),
             entry.isHidden ? 'muted' : ''
-        ));
-        actions.appendChild(this.createAction(
-            entry.isKept ? 'bi-check-circle-fill' : 'bi-check-circle',
-            entry.isKept ? 'Kept (click to unmark)' : 'Keep for export',
-            () => this.store.toggleKeep(entry.uuid),
-            entry.isKept ? 'active' : ''
         ));
         if (entry.mergedCount > 1 || entry.splitFromUuid) {
             actions.appendChild(this.createAction(

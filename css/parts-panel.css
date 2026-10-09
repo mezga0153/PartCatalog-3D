@@ -132,8 +132,27 @@
     opacity: 0.45;
 }
 
-.parts-table tbody tr.is-kept td.name {
-    color: #5fd38d;
+.parts-table tbody tr.is-excluded td:not(.include):not(.actions) {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+.parts-table .include {
+    width: 1px;
+    padding-right: 0;
+}
+
+.parts-table .form-check-input {
+    margin-top: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+}
+
+.parts-table .form-check-input:checked,
+.parts-table .form-check-input:indeterminate {
+    background-color: #198754;
+    border-color: #198754;
 }
 
 .part-note {

@@ -1,6 +1,17 @@
 import * as THREE from 'three';
 import { formatSize } from './units.js';
 
+// Shared materials for highlighted and excluded parts
+const selectedMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.1, roughness: 0.7 });
+const excludedMaterial = new THREE.MeshStandardMaterial({
+    color: 0x888888,
+    metalness: 0,
+    roughness: 1,
+    transparent: true,
+    opacity: 0.15,
+    depthWrite: false
+});
+
 // UI state for the parts list (plain object; keep three.js objects out of reactive proxies)
 export const meshStore = {
     meshes: [],
@@ -25,7 +36,7 @@ export const meshStore = {
             vertexCount: meshData.boxInfo.vertexCount,
             materialName: meshData.materialName,
             isHidden: false,
-            isKept: false,
+            isIncluded: true,
             threeObject: part.object,
             threeMeshes: part.meshes,
             // Multi-material parts are merged from several meshes and can be split back
@@ -48,26 +59,26 @@ export const meshStore = {
         if (entry.splitFromUuid) {
             const siblings = this.meshes.filter(m => m.splitFromUuid === entry.splitFromUuid);
             
-            // The merged part is hidden/kept only if all its pieces were
+            // The merged part is hidden only if all its pieces were, and included if any was
             const isHidden = siblings.every(m => m.isHidden);
-            const isKept = siblings.every(m => m.isKept);
+            const isIncluded = siblings.some(m => m.isIncluded);
             siblings.forEach(m => {
                 if (m.isHidden !== isHidden) this.toggleVisibility(m.uuid);
-                if (m.isKept !== isKept) this.toggleKeep(m.uuid);
+                if (m.isIncluded !== isIncluded) this.setIncluded([m.uuid], isIncluded);
             });
             
             const partData = meshManager.describePart(meshManager.mergePart(entry.splitFromUuid));
             const index = this.meshes.indexOf(siblings[0]);
             this.meshes = this.meshes.filter(m => !siblings.includes(m));
             if (partData) {
-                this.meshes.splice(index, 0, { ...this.createEntry(partData), isHidden, isKept });
+                this.meshes.splice(index, 0, { ...this.createEntry(partData), isHidden, isIncluded });
             }
         } else {
-            // Pieces inherit hidden/kept state; their meshes already look that way
+            // Pieces inherit hidden/included state; their meshes already look that way
             const pieces = meshManager.splitPart(uuid)
                 .map(piece => meshManager.describePart(piece))
                 .filter(Boolean)
-                .map(partData => ({ ...this.createEntry(partData), isHidden: entry.isHidden, isKept: entry.isKept }));
+                .map(partData => ({ ...this.createEntry(partData), isHidden: entry.isHidden, isIncluded: entry.isIncluded }));
             if (pieces.length === 0) return;
             
             this.meshes.splice(this.meshes.indexOf(entry), 1, ...pieces);
@@ -183,18 +194,7 @@ export const meshStore = {
         if (!mesh) return;
         
         this.selectedMeshUuid = uuid;
-        
-        // Apply red material
-        mesh.threeMeshes.forEach(threeMesh => {
-            if (!threeMesh.userData.originalMaterial) {
-                threeMesh.userData.originalMaterial = threeMesh.material.clone();
-            }
-            threeMesh.material = new THREE.MeshStandardMaterial({ 
-                color: 0xff0000,
-                metalness: threeMesh.userData.originalMaterial.metalness || 0.1,
-                roughness: threeMesh.userData.originalMaterial.roughness || 0.7
-            });
-        });
+        this.refreshAppearance(mesh);
         
         this.updateUI();
     },
@@ -203,16 +203,9 @@ export const meshStore = {
         if (!this.selectedMeshUuid) return;
         
         const mesh = this.findMeshByUuid(this.selectedMeshUuid);
-        if (mesh) {
-            // Restore original material
-            mesh.threeMeshes.forEach(threeMesh => {
-                if (threeMesh.userData.originalMaterial) {
-                    threeMesh.material = threeMesh.userData.originalMaterial;
-                }
-            });
-        }
-        
         this.selectedMeshUuid = null;
+        if (mesh) this.refreshAppearance(mesh);
+
         this.updateUI();
     },
     
@@ -237,33 +230,14 @@ export const meshStore = {
         this.updateUI();
     },
     
-    toggleKeep(uuid) {
-        const mesh = this.findMeshByUuid(uuid);
-        if (!mesh) return;
-        
-        mesh.isKept = !mesh.isKept;
-        
-        mesh.threeMeshes.forEach(threeMesh => {
-            if (!threeMesh.userData.originalOpacity) {
-                threeMesh.userData.originalOpacity = threeMesh.material.opacity || 1;
-                threeMesh.userData.originalColor = threeMesh.material.color ? threeMesh.material.color.clone() : new THREE.Color(0xffffff);
-                threeMesh.userData.originalEmissive = threeMesh.material.emissive ? threeMesh.material.emissive.clone() : new THREE.Color(0x000000);
-            }
+    // Include or exclude parts from the cut list; excluded parts are ghosted in 3D
+    setIncluded(uuids, isIncluded) {
+        uuids.forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (!mesh) return;
             
-            if (mesh.isKept) {
-                threeMesh.material.color.set(0x00ff00);
-                threeMesh.material.transparent = true;
-                threeMesh.material.opacity = 0.1;
-                threeMesh.material.emissive.set(0x004400);
-            } else {
-                threeMesh.material.color.copy(threeMesh.userData.originalColor);
-                threeMesh.material.emissive.copy(threeMesh.userData.originalEmissive);
-                threeMesh.material.opacity = threeMesh.userData.originalOpacity;
-                if (threeMesh.material.opacity === 1) {
-                    threeMesh.material.transparent = false;
-                }
-            }
-            threeMesh.material.needsUpdate = true;
+            mesh.isIncluded = isIncluded;
+            this.refreshAppearance(mesh);
         });
         this.updateUI();
         
@@ -271,5 +245,27 @@ export const meshStore = {
         if (window.exportManager) {
             window.exportManager.updateButtonState();
         }
+    },
+    
+    toggleIncluded(uuid) {
+        const mesh = this.findMeshByUuid(uuid);
+        if (mesh) this.setIncluded([uuid], !mesh.isIncluded);
+    },
+    
+    // Pick the material for a part from its state: selected, excluded or its own
+    refreshAppearance(mesh) {
+        mesh.threeMeshes.forEach(threeMesh => {
+            if (!threeMesh.userData.originalMaterial) {
+                threeMesh.userData.originalMaterial = threeMesh.material;
+            }
+            
+            if (this.selectedMeshUuid === mesh.uuid) {
+                threeMesh.material = selectedMaterial;
+            } else if (!mesh.isIncluded) {
+                threeMesh.material = excludedMaterial;
+            } else {
+                threeMesh.material = threeMesh.userData.originalMaterial;
+            }
+        });
     }
 };
