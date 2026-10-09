@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { escapeHtml } from './html.js';
 import { createGLTFLoader } from './loader.js';
 import { meshStore } from './ui-store.js';
+import { animateVector, Easing } from './animation.js';
 
 export class ToolbarManager {
     constructor(cameraManager, meshManager) {
@@ -369,17 +370,17 @@ export class ToolbarManager {
             
             const targetPos = this.originalPositions.get(mesh).clone().add(direction);
             
-            const tween = new TWEEN.Tween(mesh.position)
-                .to({ x: targetPos.x, y: targetPos.y, z: targetPos.z }, 800)
-                .easing(TWEEN.Easing.Cubic.Out)
-                .delay(index * 50)
-                .onComplete(() => {
+            const tween = animateVector(mesh.position, targetPos, {
+                duration: 800,
+                delay: index * 50,
+                easing: Easing.cubicOut,
+                onComplete: () => {
                     completedTweens++;
                     if (completedTweens === totalTweens) {
                         this.onExplodeComplete();
                     }
-                })
-                .start();
+                }
+            });
             
             this.activeTweens.push(tween);
         });
@@ -394,17 +395,17 @@ export class ToolbarManager {
             if (this.originalPositions.has(mesh)) {
                 const originalPos = this.originalPositions.get(mesh);
                 
-                const tween = new TWEEN.Tween(mesh.position)
-                    .to({ x: originalPos.x, y: originalPos.y, z: originalPos.z }, 600)
-                    .easing(TWEEN.Easing.Cubic.InOut)
-                    .delay(index * 30)
-                    .onComplete(() => {
+                const tween = animateVector(mesh.position, originalPos.clone(), {
+                    duration: 600,
+                    delay: index * 30,
+                    easing: Easing.cubicInOut,
+                    onComplete: () => {
                         completedTweens++;
                         if (completedTweens === totalTweens) {
                             this.onImplodeComplete();
                         }
-                    })
-                    .start();
+                    }
+                });
                 
                 this.activeTweens.push(tween);
             }

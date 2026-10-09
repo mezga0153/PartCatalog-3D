@@ -122,7 +122,6 @@ function initializeViewer() {
     // Animation loop
     const animate = () => {
         requestAnimationFrame(animate);
-        TWEEN.update();
         
         // Update popup position if visible
         interactionManager.updatePopup();

@@ -156,7 +156,6 @@ Perfect for models exported from:
 
 - **Three.js** (r170, ES modules) - 3D rendering and model loading
 - **Bootstrap** - UI components and styling
-- **TWEEN.js** - Smooth animations
 - **SheetJS** - Excel export functionality
 - **Modern JavaScript** - ES modules, no build step
 
