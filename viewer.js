@@ -72,13 +72,14 @@ function initializeViewer() {
         
         // Process meshes
         meshManager.processModel(model);
+        model.updateMatrixWorld(true);
         
         // Process each mesh for UI
         model.traverse((child) => {
             if (child.isMesh && child.geometry) {
                 const filteredVertices = meshManager.getFilteredVertices(child);
                 const originalVertexCount = child.geometry?.attributes?.position?.count;
-                const boxInfo = meshManager.extractBoxFromGeometry(filteredVertices, meshManager.getPartName(child), originalVertexCount);
+                const boxInfo = meshManager.extractBoxFromGeometry(filteredVertices, meshManager.getPartName(child), originalVertexCount, child.getWorldScale(new THREE.Vector3()));
                 
                 if (boxInfo) {
                     const materialName = child.material ? (child.material.name || 'Unnamed Material') : 'No Material';

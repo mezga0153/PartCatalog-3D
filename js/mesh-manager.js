@@ -171,7 +171,7 @@ class MeshManager {
         });
     }
     
-    extractBoxFromGeometry(filteredVertices, meshName, originalVertexCount) {
+    extractBoxFromGeometry(filteredVertices, meshName, originalVertexCount, worldScale) {
         if (!filteredVertices || filteredVertices.length === 0) return null;
         
         let min = [Infinity, Infinity, Infinity];
@@ -187,10 +187,13 @@ class MeshManager {
             max[2] = Math.max(max[2], vertex.z);
         }
         
+        // Measure in the part's own orientation, but include node scaling
+        // (e.g. a unit-conversion scale on a parent node)
+        const scale = worldScale ? [Math.abs(worldScale.x), Math.abs(worldScale.y), Math.abs(worldScale.z)] : [1, 1, 1];
         const dims = [
-            max[0] - min[0],
-            max[1] - min[1],
-            max[2] - min[2]
+            (max[0] - min[0]) * scale[0],
+            (max[1] - min[1]) * scale[1],
+            (max[2] - min[2]) * scale[2]
         ];
         
         const scaleFactor = 1000.0;
