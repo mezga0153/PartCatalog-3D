@@ -1,27 +1,29 @@
 import { meshStore } from './ui-store.js';
+import { cutListRows, summarize } from './cut-list.js';
+import { escapeHtml } from './html.js';
 
+// Export the included parts as a cut list (Excel or CSV)
 export class ExportManager {
-    constructor() {
-        // Delay button creation to ensure toolbar exists
-        setTimeout(() => {
-            this.createExportButton();
-        }, 100);
+    constructor(getSheetSettings) {
+        this.getSheetSettings = getSheetSettings;
+        this.createExportButton();
     }
     
     createExportButton() {
-        // Find the toolbar (it might not exist immediately)
-        const toolbar = document.querySelector('[style*="position: absolute"][style*="top: 10px"][style*="right: 10px"]');
-        if (!toolbar) {
-            console.warn('Toolbar not found, retrying in 100ms...');
-            setTimeout(() => this.createExportButton(), 100);
-            return;
-        }
+        const toolbar = document.getElementById('toolbar');
         
-        // Create export button
-        this.exportBtn = document.createElement('button');
-        this.exportBtn.className = 'btn btn-sm btn-outline-light';
-        this.exportBtn.innerHTML = '<i class="bi bi-download"></i>';
-        this.exportBtn.title = 'Export included parts to Excel';
+        this.dropdown = document.createElement('div');
+        this.dropdown.className = 'dropdown';
+        this.dropdown.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-light toolbar-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                <li><button type="button" class="dropdown-item" data-format="xlsx"><i class="bi bi-file-earmark-spreadsheet"></i> Excel (.xlsx)</button></li>
+                <li><button type="button" class="dropdown-item" data-format="csv"><i class="bi bi-filetype-csv"></i> CSV</button></li>
+            </ul>
+        `;
+        this.exportBtn = this.dropdown.querySelector('[data-bs-toggle]');
         this.exportBtn.style.cssText = `
             border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
@@ -33,114 +35,96 @@ export class ExportManager {
             justify-content: center;
         `;
         
-        this.exportBtn.onclick = () => this.exportToXLSX();
+        this.dropdown.querySelector('[data-format="xlsx"]').onclick = () => this.exportToXLSX();
+        this.dropdown.querySelector('[data-format="csv"]').onclick = () => this.exportToCSV();
         
-        this.exportBtn.addEventListener('mouseenter', () => {
-            this.exportBtn.style.background = 'rgba(255, 255, 255, 0.2)';
-        });
-        
-        this.exportBtn.addEventListener('mouseleave', () => {
-            this.exportBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-        });
-        
-        // Add to toolbar
-        toolbar.appendChild(this.exportBtn);
-        
-        // Update button state based on included parts
+        toolbar.appendChild(this.dropdown);
         this.updateButtonState();
-        
-        console.log('Export button created successfully');
+    }
+    
+    getIncludedParts() {
+        return meshStore.meshes.filter(mesh => mesh.isIncluded);
     }
     
     updateButtonState() {
         if (!this.exportBtn) return;
         
-        if (!meshStore) return;
-        
-        const includedParts = meshStore.meshes.filter(mesh => mesh.isIncluded);
-        
-        if (includedParts.length === 0) {
-            this.exportBtn.disabled = true;
-            this.exportBtn.style.opacity = '0.5';
-            this.exportBtn.title = 'No parts included in the cut list';
-        } else {
-            this.exportBtn.disabled = false;
-            this.exportBtn.style.opacity = '1';
-            this.exportBtn.title = `Export ${includedParts.length} included part${includedParts.length === 1 ? '' : 's'} to Excel`;
-        }
+        const count = this.getIncludedParts().length;
+        this.exportBtn.disabled = count === 0;
+        this.exportBtn.style.opacity = count === 0 ? '0.5' : '1';
+        this.exportBtn.title = count === 0
+            ? 'No parts included in the cut list'
+            : `Export cut list (${count} part${count === 1 ? '' : 's'})`;
+    }
+    
+    getFilename(extension) {
+        const model = (document.title.split(' - ').slice(1).join(' - ') || 'model').replace(/\.glb$/i, '');
+        const timestamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+        return `Cut_List_${model.replace(/[^\w-]+/g, '_')}_${timestamp}.${extension}`;
     }
     
     exportToXLSX() {
-        if (!meshStore) {
-            console.error('Mesh store not available');
-            return;
-        }
-        
-        const includedParts = meshStore.meshes.filter(mesh => mesh.isIncluded);
-        
-        if (includedParts.length === 0) {
-            alert('No parts are included in the cut list. Tick some parts before exporting.');
-            return;
-        }
+        const parts = this.getIncludedParts();
+        if (parts.length === 0) return;
         
         try {
-            // Prepare data for Excel
-            const data = this.prepareExportData(includedParts);
-            
-            // Create workbook
             const workbook = XLSX.utils.book_new();
             
-            // Create worksheet
-            const worksheet = XLSX.utils.json_to_sheet(data);
+            const rows = cutListRows(parts);
+            const cutList = XLSX.utils.json_to_sheet(rows);
+            cutList['!cols'] = Object.keys(rows[0]).map(key => ({ wch: key === 'Part' || key === 'Notes' ? 30 : Math.max(10, key.length + 2) }));
+            XLSX.utils.book_append_sheet(workbook, cutList, 'Cut List');
             
-            // Set column widths
-            const columnWidths = [
-                { wch: 25 }, // Component Name
-                { wch: 20 }, // Length (mm)
-                { wch: 20 }, // Width (mm)
-                { wch: 20 }, // Thickness (mm)
-                { wch: 30 }, // Full Dimensions
-                { wch: 15 }, // Vertex Count
-                { wch: 25 }, // Material Name
-                { wch: 30 }  // Notes
-            ];
-            worksheet['!cols'] = columnWidths;
+            const { boards, banding } = summarize(parts, this.getSheetSettings());
+            const summary = XLSX.utils.json_to_sheet(boards.map(board => ({
+                'Material': board.material,
+                'Thickness (mm)': board.thickness,
+                'Parts': board.count,
+                'Area (m²)': Math.round(board.area * 100) / 100,
+                'Sheets (estimate)': board.sheets
+            })));
+            XLSX.utils.sheet_add_json(summary, banding.map(band => ({
+                'Banding': band.material,
+                'Edges': band.count,
+                'Length (m)': Math.round(band.length * 100) / 100,
+                'To order (m)': Math.round(band.toOrder * 10) / 10
+            })), { origin: boards.length + 2 });
+            summary['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 16 }];
+            XLSX.utils.book_append_sheet(workbook, summary, 'Summary');
             
-            // Add worksheet to workbook
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Cut List');
-            
-            // Generate filename with timestamp
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-');
-            const filename = `Cut_List_${timestamp}.xlsx`;
-            
-            // Save file
+            const filename = this.getFilename('xlsx');
             XLSX.writeFile(workbook, filename);
-            
-            // Show success message
-            this.showExportSuccess(includedParts.length, filename);
-            
+            this.showExportSuccess(parts.length, filename);
         } catch (error) {
             console.error('Export error:', error);
             alert('Failed to export data. Please try again.');
         }
     }
     
-    prepareExportData(includedParts) {
-        return includedParts.map((mesh, index) => {
-            const round = value => Math.round(value * 10) / 10;
-            
-            return {
-                'Component Name': mesh.name,
-                'Length (mm)': round(mesh.size.length),
-                'Width (mm)': round(mesh.size.width),
-                'Thickness (mm)': round(mesh.size.thickness),
-                'Full Dimensions': mesh.dimensions,
-                'Vertex Count': mesh.vertexCount,
-                'Material Name': mesh.materialName,
-                                'Notes': '', // Empty field for user notes
-                'Export Order': index + 1
-            };
-        });
+    exportToCSV() {
+        const parts = this.getIncludedParts();
+        if (parts.length === 0) return;
+        
+        const rows = cutListRows(parts);
+        const columns = Object.keys(rows[0]);
+        const quote = value => {
+            const text = String(value);
+            return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+        };
+        const csv = [columns, ...rows.map(row => columns.map(column => row[column]))]
+            .map(values => values.map(quote).join(','))
+            .join('\r\n');
+        
+        // BOM so Excel opens the file as UTF-8
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+        const filename = this.getFilename('csv');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        
+        this.showExportSuccess(parts.length, filename);
     }
     
     showExportSuccess(count, filename) {
@@ -169,7 +153,7 @@ export class ExportManager {
                 <div>
                     <div style="font-weight: bold;">Export Successful!</div>
                     <div style="font-size: 12px; opacity: 0.9;">
-                        ${count} part${count === 1 ? "" : "s"} exported to ${filename}
+                        ${count} part${count === 1 ? '' : 's'} exported to ${escapeHtml(filename)}
                     </div>
                 </div>
             </div>

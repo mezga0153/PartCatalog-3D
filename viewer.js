@@ -43,7 +43,7 @@ function initializeViewer() {
     const sidebar = document.getElementById('sidebar');
     setupSidebarTabs(sidebar);
     new PartsTable(meshStore, document.getElementById('partsPane'), sidebar.querySelector('.parts-count'));
-    new SummaryPanel(meshStore, document.getElementById('summaryPane'));
+    const summaryPanel = new SummaryPanel(meshStore, document.getElementById('summaryPane'));
     
     // Initialize mesh manager
     const meshManager = new MeshManager();
@@ -60,7 +60,7 @@ function initializeViewer() {
     const interactionManager = new InteractionManager(renderer, cameraManager.camera, meshManager);
 
     // Initialize export manager
-    window.exportManager = new ExportManager();
+    window.exportManager = new ExportManager(() => summaryPanel.sheet);
 
     // Function to process loaded model
     function processLoadedModel(gltf, filename) {

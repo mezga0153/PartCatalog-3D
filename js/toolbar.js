@@ -16,6 +16,7 @@ export class ToolbarManager {
     
     createToolbar() {
         this.toolbar = document.createElement('div');
+        this.toolbar.id = 'toolbar';
         this.toolbar.style.cssText = `
             position: absolute;
             top: 10px;

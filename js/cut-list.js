@@ -66,3 +66,31 @@ export function summarize(entries, sheet) {
             .map(band => ({ ...band, toOrder: withWaste(band.length) }))
     };
 }
+
+// One row per group of identical parts, in the column layout cutting services
+// commonly import: dimensions in mm, quantity, board, banding per edge, grain.
+export function cutListRows(entries) {
+    const round = value => Math.round(value * 10) / 10;
+    
+    return groupIdenticalParts(entries).map((group, index) => {
+        const entry = group[0];
+        const notes = [...new Set(group.map(m => m.notes).filter(Boolean))];
+        
+        return {
+            'No.': index + 1,
+            'Part': [...new Set(group.map(m => m.name))].join(', '),
+            'Qty': group.length,
+            'Length (mm)': round(entry.size.length),
+            'Width (mm)': round(entry.size.width),
+            'Thickness (mm)': round(entry.size.thickness),
+            'Material': entry.materialName,
+            'Edge L1': entry.edges?.L1 || '',
+            'Edge L2': entry.edges?.L2 || '',
+            'Edge W1': entry.edges?.W1 || '',
+            'Edge W2': entry.edges?.W2 || '',
+            'Grain': entry.grain ? GRAIN_LABELS[entry.grain] : '',
+            'Assembly': [...new Set(group.map(m => m.assembly).filter(Boolean))].join(', '),
+            'Notes': notes.join('; ')
+        };
+    });
+}
