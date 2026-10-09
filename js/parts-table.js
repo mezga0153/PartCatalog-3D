@@ -38,9 +38,10 @@ function areaOf(entries) {
 
 // Compact, sortable and searchable table of the parts in the store
 export class PartsTable {
-    constructor(store, container) {
+    constructor(store, container, countEl) {
         this.store = store;
         this.container = container;
+        this.countEl = countEl;
         this.sortKey = null;
         this.sortDir = 1;
         this.search = '';
@@ -49,14 +50,13 @@ export class PartsTable {
         this.collapsedSections = new Set();
         
         this.build();
-        store.onChange = () => this.render();
+        store.subscribe(() => this.render());
         this.render();
     }
     
     build() {
         this.container.innerHTML = `
             <div class="parts-header">
-                <h5>Parts <span class="parts-count badge"></span></h5>
                 <input type="search" class="form-control form-control-sm parts-search" placeholder="Search name or material">
                 <div class="parts-options">
                     <label class="parts-option"><input type="checkbox" class="form-check-input combine-identical" checked> Combine identical parts</label>
@@ -78,7 +78,6 @@ export class PartsTable {
             </div>
         `;
         
-        this.countEl = this.container.querySelector('.parts-count');
         this.tbody = this.container.querySelector('tbody');
         this.emptyEl = this.container.querySelector('.parts-empty');
         

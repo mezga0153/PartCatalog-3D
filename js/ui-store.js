@@ -99,11 +99,15 @@ export const meshStore = {
         }
     },
     
-    // Set by the parts table to re-render when state changes
-    onChange: null,
+    // Views re-render when state changes
+    listeners: [],
+    
+    subscribe(listener) {
+        this.listeners.push(listener);
+    },
     
     updateUI() {
-        if (this.onChange) this.onChange();
+        this.listeners.forEach(listener => listener());
     },
     
     findMeshByUuid(uuid) {

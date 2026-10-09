@@ -31,7 +31,13 @@
 
 <body>
     <div class="sidebar" id="sidebar">
-        <!-- Parts table is rendered here by parts-table.js -->
+        <nav class="sidebar-tabs">
+            <button type="button" class="sidebar-tab active" data-pane="partsPane">Parts <span class="parts-count badge"></span></button>
+            <button type="button" class="sidebar-tab" data-pane="summaryPane">Summary</button>
+        </nav>
+        <!-- Rendered by parts-table.js and summary-panel.js -->
+        <div class="sidebar-pane" id="partsPane"></div>
+        <div class="sidebar-pane" id="summaryPane" hidden></div>
     </div>
 
     <!-- Bootstrap JS -->
