@@ -36,6 +36,7 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 ├── 📄 viewer.js                 # Main application orchestrator
 ├── 📄 demo.glb                  # Demo model (a small SketchUp cabinet)
 ├── 📁 examples/                 # More test models (banding, assemblies, compression, a large model)
+├── 📁 tests/                    # Headless-Chrome browser tests (node --test 'tests/*.test.mjs')
 ├── 📁 js/
 │   ├── 🎥 scene.js              # Scene setup, lighting, environment
 │   ├── 📹 camera.js             # Camera controls and framing
@@ -130,6 +131,14 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
    - Untick parts you don't need, adjust names, quantities and notes
    - Check the totals in the Summary tab
    - Export to Excel or CSV, or print it
+
+## Running the Tests 🧪
+
+```bash
+node --test 'tests/*.test.mjs'
+```
+
+Uses Node's built-in test runner and a local Chrome - see [tests/README.md](tests/README.md).
 
 ## Supported Formats 📁
 
