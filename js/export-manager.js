@@ -1,6 +1,6 @@
 import { meshStore } from './ui-store.js';
 import { cutListRows, summarize, totalQuantity } from './cut-list.js';
-import { escapeHtml } from './html.js';
+import { showToast } from './toast.js';
 import { toUnit, unitLabel, areaInUnit, areaLabel, runInUnit, runLabel } from './units.js';
 import { printCutList } from './print.js';
 
@@ -17,7 +17,7 @@ export class ExportManager {
         this.dropdown = document.createElement('div');
         this.dropdown.className = 'dropdown';
         this.dropdown.innerHTML = `
-            <button type="button" class="btn btn-sm btn-outline-light toolbar-btn" data-bs-toggle="dropdown" aria-expanded="false">
+            <button type="button" class="btn btn-sm toolbar-btn" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-download"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
@@ -27,16 +27,6 @@ export class ExportManager {
             </ul>
         `;
         this.exportBtn = this.dropdown.querySelector('[data-bs-toggle]');
-        this.exportBtn.style.cssText = `
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            min-width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
         
         this.dropdown.querySelector('[data-format="xlsx"]').onclick = () => this.exportToXLSX();
         this.dropdown.querySelector('[data-format="csv"]').onclick = () => this.exportToCSV();
@@ -55,7 +45,6 @@ export class ExportManager {
         
         const count = this.getIncludedParts().length;
         this.exportBtn.disabled = count === 0;
-        this.exportBtn.style.opacity = count === 0 ? '0.5' : '1';
         this.exportBtn.title = count === 0
             ? 'No parts included in the cut list'
             : `Export cut list (${count} part${count === 1 ? '' : 's'})`;
@@ -148,47 +137,6 @@ export class ExportManager {
     }
     
     showExportSuccess(count, filename) {
-        // Create a temporary success message
-        const successMsg = document.createElement('div');
-        successMsg.style.cssText = `
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            background: rgba(25, 135, 84, 0.9);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 6px;
-            font-family: sans-serif;
-            font-size: 14px;
-            z-index: 2000;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(25, 135, 84, 0.5);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: opacity 0.3s ease;
-        `;
-        
-        successMsg.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="bi bi-check-circle-fill"></i>
-                <div>
-                    <div style="font-weight: bold;">Export Successful!</div>
-                    <div style="font-size: 12px; opacity: 0.9;">
-                        ${count} piece${count === 1 ? '' : 's'} exported to ${escapeHtml(filename)}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(successMsg);
-        
-        // Auto-remove after 4 seconds
-        setTimeout(() => {
-            successMsg.style.opacity = '0';
-            setTimeout(() => {
-                if (successMsg.parentNode) {
-                    successMsg.parentNode.removeChild(successMsg);
-                }
-            }, 300);
-        }, 4000);
+        showToast('Export Successful!', `${count} piece${count === 1 ? '' : 's'} exported to ${filename}`);
     }
 }

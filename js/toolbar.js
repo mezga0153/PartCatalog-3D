@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { escapeHtml } from './html.js';
-import { createGLTFLoader } from './loader.js';
 import { meshStore } from './ui-store.js';
 import { animateVector, Easing } from './animation.js';
 
@@ -19,289 +17,27 @@ export class ToolbarManager {
     createToolbar() {
         this.toolbar = document.createElement('div');
         this.toolbar.id = 'toolbar';
-        this.toolbar.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            display: flex;
-            gap: 5px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px;
-            border-radius: 6px;
-            backdrop-filter: blur(5px);
-        `;
         
-        this.createOpenFileButton();
-        this.createResetButton();
-        this.createExplodeButton();
-        this.createIsolateButton();
+        this.openFileBtn = this.createButton('bi-folder2-open', 'Open GLB File', () => window.fileUploadManager.show());
+        this.resetCameraBtn = this.createButton('bi-house', 'Reset Camera', () => this.cameraManager.reset());
+        this.explodeBtn = this.createButton('bi-arrows-expand', 'Explode Model', () => this.toggleExplode());
+        this.isolateBtn = this.createButton('bi-bullseye', 'Isolate selection (fade other parts)', () => this.toggleIsolate());
         
-        this.toolbar.appendChild(this.openFileBtn);
-        this.toolbar.appendChild(this.resetCameraBtn);
-        this.toolbar.appendChild(this.explodeBtn);
-        this.toolbar.appendChild(this.isolateBtn);
+        // Keep the isolate button state in sync, e.g. after loading another model
+        meshStore.subscribe(() => this.isolateBtn.classList.toggle('active', meshStore.isolate));
+        
         document.body.appendChild(this.toolbar);
     }
     
-    createOpenFileButton() {
-        this.openFileBtn = document.createElement('button');
-        this.openFileBtn.className = 'btn btn-sm btn-outline-light';
-        this.openFileBtn.innerHTML = '<i class="bi bi-folder2-open"></i>';
-        this.openFileBtn.title = 'Open GLB File';
-        this.openFileBtn.style.cssText = `
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            min-width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-        
-        this.openFileBtn.onclick = () => {
-            // Show the upload dialog instead of directly opening file input
-            if (window.fileUploadManager) {
-                window.fileUploadManager.show();
-            } else {
-                // Fallback to direct file input if upload manager not available
-                this.showFileInput();
-            }
-        };
-        
-        this.openFileBtn.addEventListener('mouseenter', () => {
-            this.openFileBtn.style.background = 'rgba(255, 255, 255, 0.2)';
-        });
-        
-        this.openFileBtn.addEventListener('mouseleave', () => {
-            this.openFileBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-        });
-    }
-    
-    showFileInput() {
-        // Fallback method - create temporary file input
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.glb';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
-        
-        fileInput.onclick = () => fileInput.click();
-        
-        fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                this.handleFileLoad(file);
-            }
-            document.body.removeChild(fileInput);
-        });
-        
-        fileInput.click();
-    }
-    
-    handleFileLoad(file) {
-        // Validate file type
-        if (!file.name.toLowerCase().endsWith('.glb')) {
-            alert('Please select a valid GLB file.');
-            return;
-        }
-        
-        // Validate file size (max 100MB)
-        const maxSize = 100 * 1024 * 1024; // 100MB
-        if (file.size > maxSize) {
-            alert('File is too large. Maximum size is 100MB.');
-            return;
-        }
-        
-        // Show loading state
-        this.setLoadingState(true);
-        
-        const reader = new FileReader();
-        
-        reader.onload = (event) => {
-            try {
-                const arrayBuffer = event.target.result;
-                const blob = new Blob([arrayBuffer]);
-                const url = URL.createObjectURL(blob);
-                
-                // Load the model
-                const loader = createGLTFLoader();
-                loader.load(
-                    url,
-                    (gltf) => {
-                        URL.revokeObjectURL(url);
-                        
-                        // Get the process function from the global scope
-                        if (window.processLoadedModel) {
-                            window.processLoadedModel(gltf, file.name);
-                        } else {
-                            console.error('processLoadedModel function not available');
-                        }
-                        
-                        this.setLoadingState(false);
-                        this.showSuccessMessage(file.name);
-                    },
-                    (progress) => {
-                        // Loading progress could be shown here
-                    },
-                    (error) => {
-                        URL.revokeObjectURL(url);
-                        console.error('Error loading GLB file:', error);
-                        alert('Failed to load GLB file. Please check the file format.');
-                        this.setLoadingState(false);
-                    }
-                );
-            } catch (error) {
-                console.error('Error reading file:', error);
-                alert('Failed to read the file. Please try again.');
-                this.setLoadingState(false);
-            }
-        };
-        
-        reader.onerror = () => {
-            alert('Failed to read the file. Please try again.');
-            this.setLoadingState(false);
-        };
-        
-        reader.readAsArrayBuffer(file);
-    }
-    
-    setLoadingState(isLoading) {
-        if (isLoading) {
-            this.openFileBtn.disabled = true;
-            this.openFileBtn.style.opacity = '0.5';
-            this.openFileBtn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
-        } else {
-            this.openFileBtn.disabled = false;
-            this.openFileBtn.style.opacity = '1';
-            this.openFileBtn.innerHTML = '<i class="bi bi-folder2-open"></i>';
-        }
-    }
-    
-    showSuccessMessage(filename) {
-        // Create a temporary success message
-        const successMsg = document.createElement('div');
-        successMsg.style.cssText = `
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            background: rgba(25, 135, 84, 0.9);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 6px;
-            font-family: sans-serif;
-            font-size: 14px;
-            z-index: 2000;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(25, 135, 84, 0.5);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: opacity 0.3s ease;
-        `;
-        
-        successMsg.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="bi bi-check-circle-fill"></i>
-                <div>
-                    <div style="font-weight: bold;">File Loaded!</div>
-                    <div style="font-size: 12px; opacity: 0.9;">${escapeHtml(filename)}</div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(successMsg);
-        
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            successMsg.style.opacity = '0';
-            setTimeout(() => {
-                if (successMsg.parentNode) {
-                    successMsg.parentNode.removeChild(successMsg);
-                }
-            }, 300);
-        }, 3000);
-    }
-    
-    createResetButton() {
-        this.resetCameraBtn = document.createElement('button');
-        this.resetCameraBtn.className = 'btn btn-sm btn-outline-light';
-        this.resetCameraBtn.innerHTML = '<i class="bi bi-house"></i>';
-        this.resetCameraBtn.title = 'Reset Camera';
-        this.resetCameraBtn.style.cssText = `
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            min-width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-        
-        this.resetCameraBtn.onclick = () => this.cameraManager.reset();
-        
-        this.resetCameraBtn.addEventListener('mouseenter', () => {
-            this.resetCameraBtn.style.background = 'rgba(255, 255, 255, 0.2)';
-        });
-        
-        this.resetCameraBtn.addEventListener('mouseleave', () => {
-            this.resetCameraBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-        });
-    }
-    
-    createExplodeButton() {
-        this.explodeBtn = document.createElement('button');
-        this.explodeBtn.className = 'btn btn-sm btn-outline-light';
-        this.explodeBtn.innerHTML = '<i class="bi bi-arrows-expand"></i>';
-        this.explodeBtn.title = 'Explode/Implode Model';
-        this.explodeBtn.style.cssText = `
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            min-width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-        
-        this.explodeBtn.onclick = () => this.toggleExplode();
-        
-        this.explodeBtn.addEventListener('mouseenter', () => {
-            if (!this.isExploded) {
-                this.explodeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
-            }
-        });
-        
-        this.explodeBtn.addEventListener('mouseleave', () => {
-            if (!this.isExploded) {
-                this.explodeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-            }
-        });
-    }
-    
-    createIsolateButton() {
-        this.isolateBtn = document.createElement('button');
-        this.isolateBtn.className = 'btn btn-sm btn-outline-light';
-        this.isolateBtn.innerHTML = '<i class="bi bi-bullseye"></i>';
-        this.isolateBtn.title = 'Isolate selection (fade other parts)';
-        this.isolateBtn.style.cssText = `
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            min-width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        `;
-        
-        this.isolateBtn.onclick = () => this.toggleIsolate();
-        
-        // Keep the button state in sync, e.g. after loading another model
-        meshStore.subscribe(() => {
-            this.isolateBtn.style.background = meshStore.isolate ? 'rgba(135, 206, 235, 0.4)' : 'rgba(255, 255, 255, 0.1)';
-        });
+    createButton(icon, title, onClick) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-sm toolbar-btn';
+        button.innerHTML = `<i class="bi ${icon}"></i>`;
+        button.title = title;
+        button.onclick = onClick;
+        this.toolbar.appendChild(button);
+        return button;
     }
     
     toggleIsolate() {
@@ -328,7 +64,6 @@ export class ToolbarManager {
         this.activeTweens.length = 0;
         
         this.explodeBtn.disabled = true;
-        this.explodeBtn.style.opacity = '0.7';
         
         if (this.isExploded) {
             this.explodeMeshes();
@@ -459,18 +194,16 @@ export class ToolbarManager {
     onExplodeComplete() {
         this.explodeBtn.innerHTML = '<i class="bi bi-arrows-collapse"></i>';
         this.explodeBtn.title = 'Implode Model';
-        this.explodeBtn.style.background = 'rgba(255, 255, 255, 0.2)';
+        this.explodeBtn.classList.add('active');
         this.explodeBtn.disabled = false;
-        this.explodeBtn.style.opacity = '1';
         this.isAnimating = false;
     }
     
     onImplodeComplete() {
         this.explodeBtn.innerHTML = '<i class="bi bi-arrows-expand"></i>';
         this.explodeBtn.title = 'Explode Model';
-        this.explodeBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+        this.explodeBtn.classList.remove('active');
         this.explodeBtn.disabled = false;
-        this.explodeBtn.style.opacity = '1';
         this.isAnimating = false;
     }
 }
