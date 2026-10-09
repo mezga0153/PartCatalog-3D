@@ -127,9 +127,38 @@ export class FileUploadManager {
             }
         });
         
-        // Prevent default drag behaviors on document
-        document.addEventListener('dragover', (e) => e.preventDefault());
-        document.addEventListener('drop', (e) => e.preventDefault());
+        // Files can also be dropped anywhere on the page
+        let dragDepth = 0;
+        const hasFiles = (event) => event.dataTransfer && [...event.dataTransfer.types].includes('Files');
+        
+        document.addEventListener('dragenter', (event) => {
+            if (!hasFiles(event)) return;
+            dragDepth++;
+            document.body.classList.add('file-drag-active');
+        });
+        
+        document.addEventListener('dragleave', (event) => {
+            if (!hasFiles(event)) return;
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (dragDepth === 0) document.body.classList.remove('file-drag-active');
+        });
+        
+        document.addEventListener('dragover', (event) => event.preventDefault());
+        
+        document.addEventListener('drop', (event) => {
+            dragDepth = 0;
+            document.body.classList.remove('file-drag-active');
+            
+            // The dialog's drop zone already handled it
+            if (event.defaultPrevented) return;
+            event.preventDefault();
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                this.show();
+                this.handleFile(files[0]);
+            }
+        });
     }
     
     loadDemo() {
