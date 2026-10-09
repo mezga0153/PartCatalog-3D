@@ -1,17 +1,20 @@
 class MeshManager {
     constructor() {
         this.allMeshes = [];
+        this.parts = [];
+        this.partByMesh = new Map();
         this.boxes = [];
         this.meshVertices = new Map();
     }
     
-    processModel(model) {
+    processModel(model, associations) {
         this.collectMeshes(model);
+        this.collectParts(associations);
         this.compactGeometries();
         this.processVertices();
         this.enhanceMaterials(model);
         
-        return this.allMeshes;
+        return this.parts;
     }
     
     collectMeshes(model) {
@@ -21,6 +24,42 @@ class MeshManager {
                 this.allMeshes.push(child);
             }
         });
+    }
+    
+    // A part is one glTF node. A glTF mesh with several primitives (one per
+    // material) is loaded as a Group of meshes, which together form one part.
+    collectParts(associations) {
+        this.parts = [];
+        this.partByMesh = new Map();
+        const partByObject = new Map();
+        
+        this.allMeshes.forEach((mesh) => {
+            const object = this.isPrimitiveOfGroup(mesh, associations) ? mesh.parent : mesh;
+            
+            let part = partByObject.get(object);
+            if (!part) {
+                part = { object, meshes: [] };
+                partByObject.set(object, part);
+                this.parts.push(part);
+            }
+            part.meshes.push(mesh);
+            this.partByMesh.set(mesh, part);
+        });
+    }
+    
+    isPrimitiveOfGroup(mesh, associations) {
+        const parent = mesh.parent;
+        if (!parent || !parent.isGroup) return false;
+        
+        if (associations) {
+            const meshRef = associations.get(mesh);
+            const groupRef = associations.get(parent);
+            return !!meshRef && !!groupRef && meshRef.primitives !== undefined &&
+                groupRef.primitives === undefined && groupRef.meshes === meshRef.meshes;
+        }
+        
+        // Without loader associations, fall back to GLTFLoader's auto-generated names
+        return /^mesh_\d+(_\d+)?$/.test(mesh.name);
     }
     
     // Some exporters (e.g. the SketchUp glTF exporter) share one vertex buffer
@@ -125,18 +164,69 @@ class MeshManager {
         return this.meshVertices.get(mesh) || [];
     }
     
-    // Display name for a mesh. Multi-primitive glTF meshes become a Group (named
-    // after the node) holding auto-named children like "mesh_0_1", so prefer the
-    // original glTF node name of the mesh itself or of that group.
-    getPartName(mesh) {
-        if (mesh.userData.name) return mesh.userData.name;
+    // Unique vertices of all meshes in a part, in the part object's local space
+    getPartVertices(part) {
+        const seen = new Set();
+        const unique = [];
+        const point = new THREE.Vector3();
         
-        const parent = mesh.parent;
-        if (parent && parent.isGroup && parent.userData.name && /^mesh_\d+(_\d+)?$/.test(mesh.name)) {
-            return parent.userData.name;
-        }
+        part.meshes.forEach((mesh) => {
+            const toPart = mesh === part.object ? null : mesh.matrix;
+            
+            this.getFilteredVertices(mesh).forEach((vertex) => {
+                let { x, y, z, key } = vertex;
+                if (toPart) {
+                    point.set(x, y, z).applyMatrix4(toPart);
+                    ({ x, y, z } = point);
+                    key = `${+x.toFixed(6)},${+y.toFixed(6)},${+z.toFixed(6)}`;
+                }
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    unique.push({ x, y, z, key });
+                }
+            });
+        });
         
-        return mesh.name;
+        return unique;
+    }
+    
+    getPartVertexCount(part) {
+        return part.meshes.reduce((count, mesh) => count + mesh.geometry.getAttribute('position').count, 0);
+    }
+    
+    getPartMaterialName(part) {
+        const names = [...new Set(part.meshes.map(mesh => mesh.material ? (mesh.material.name || 'Unnamed Material') : 'No Material'))];
+        return names.join(', ');
+    }
+    
+    // Bounding box of a part's own meshes (excluding any child nodes)
+    getPartBox(part) {
+        const box = new THREE.Box3();
+        part.meshes.forEach(mesh => box.expandByObject(mesh));
+        return box;
+    }
+    
+    // Display name for a part: the original (unsanitised) glTF node name if present
+    getPartName(part) {
+        return part.object.userData.name || part.object.name;
+    }
+    
+    // Box info and material name for the parts list, or null if the part has no vertices
+    describePart(part) {
+        const vertices = this.getPartVertices(part);
+        const vertexCount = this.getPartVertexCount(part);
+        const worldScale = part.object.getWorldScale(new THREE.Vector3());
+        const boxInfo = this.extractBoxFromGeometry(vertices, this.getPartName(part), vertexCount, worldScale);
+        
+        return boxInfo ? { part, boxInfo, materialName: this.getPartMaterialName(part) } : null;
+    }
+    
+    getPartForMesh(mesh) {
+        return this.partByMesh.get(mesh);
+    }
+    
+    getParts() {
+        return this.parts;
     }
     
     enhanceMaterials(model) {

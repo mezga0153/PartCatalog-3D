@@ -52,16 +52,7 @@ class InteractionManager {
     }
     
     getVisibleMeshes() {
-        const meshStore = Alpine.store('meshStore');
-        if (!meshStore) return this.meshManager.getAllMeshes();
-        
-        // Filter out hidden meshes by matching UUID
-        const visibleMeshes = this.meshManager.getAllMeshes().filter(mesh => {
-            const uiMesh = meshStore.findMeshByUuid(mesh.uuid);
-            return !uiMesh || !uiMesh.isHidden;
-        });
-        
-        return visibleMeshes;
+        return this.meshManager.getAllMeshes().filter(mesh => mesh.visible);
     }
     
     onMeshClick(event) {
@@ -85,15 +76,16 @@ class InteractionManager {
             const clickedMesh = intersects[0].object;
             console.log('Clicked mesh:', clickedMesh);
             const meshStore = Alpine.store('meshStore');
+            const part = this.meshManager.getPartForMesh(clickedMesh);
             
-            if (meshStore) {
+            if (meshStore && part) {
                 // Use the unified selection method
-                meshStore.selectMesh(clickedMesh.uuid);
+                meshStore.selectMesh(part.object.uuid);
                 
-                // Show popup with mesh information
-                const meshData = meshStore.findMeshByUuid(clickedMesh.uuid);
+                // Show popup with part information
+                const meshData = meshStore.findMeshByUuid(part.object.uuid);
                 if (meshData) {
-                    this.popupManager.showPopup(clickedMesh, meshData);
+                    this.popupManager.showPopup(part, meshData);
                 }
             }
         } else {

@@ -6,18 +6,25 @@ document.addEventListener('alpine:init', () => {
         boundingBoxes: new Map(), // Store bounding box wireframes
         
         addMesh(meshData) {
-            this.meshes.push({
-                uuid: meshData.mesh.uuid,
+            this.meshes.push(this.createEntry(meshData));
+            
+            this.updateUI();
+        },
+        
+        createEntry(meshData) {
+            const part = meshData.part;
+            
+            return {
+                uuid: part.object.uuid,
                 name: meshData.boxInfo.name,
                 dimensions: `${meshData.boxInfo.dimensions_mm.x} × ${meshData.boxInfo.dimensions_mm.y} × ${meshData.boxInfo.dimensions_mm.z} mm`,
                 vertexCount: meshData.boxInfo.vertexCount,
                 materialName: meshData.materialName,
                 isHidden: false,
                 isKept: false,
-                threeMesh: meshData.mesh
-            });
-            
-            this.updateUI();
+                threeObject: part.object,
+                threeMeshes: part.meshes
+            };
         },
         
         updateUI() {
@@ -25,7 +32,7 @@ document.addEventListener('alpine:init', () => {
             const meshCount = document.getElementById('meshCount');
             
             if (meshCount) {
-                meshCount.textContent = `${this.meshes.length} meshes`;
+                meshCount.textContent = `${this.meshes.length} parts`;
                 meshCount.className = 'badge bg-primary';
             }
             
@@ -95,6 +102,7 @@ document.addEventListener('alpine:init', () => {
             
             buttonGroup.appendChild(hideBtn);
             buttonGroup.appendChild(keepBtn);
+            
             cardBody.appendChild(meshBtn);
             cardBody.appendChild(buttonGroup);
             meshCard.appendChild(cardBody);
@@ -107,12 +115,13 @@ document.addEventListener('alpine:init', () => {
         },
         
         findMeshByThreeObject(threeObject) {
-            return this.meshes.find(m => m.threeMesh === threeObject);
+            return this.meshes.find(m => m.threeObject === threeObject || m.threeMeshes.includes(threeObject));
         },
         
         createBoundingBox(mesh) {
             // Calculate bounding box
-            const box = new THREE.Box3().setFromObject(mesh.threeMesh);
+            const box = new THREE.Box3();
+            mesh.threeMeshes.forEach(threeMesh => box.expandByObject(threeMesh));
             
             // Create wireframe box geometry
             const size = new THREE.Vector3();
@@ -151,7 +160,7 @@ document.addEventListener('alpine:init', () => {
             this.boundingBoxes.set(uuid, boundingBox);
             
             // Add to scene (get scene from the mesh's parent)
-            let scene = mesh.threeMesh.parent;
+            let scene = mesh.threeObject.parent;
             while (scene && !scene.isScene) {
                 scene = scene.parent;
             }
@@ -200,13 +209,15 @@ document.addEventListener('alpine:init', () => {
             this.selectedMeshUuid = uuid;
             
             // Apply red material
-            if (!mesh.threeMesh.userData.originalMaterial) {
-                mesh.threeMesh.userData.originalMaterial = mesh.threeMesh.material.clone();
-            }
-            mesh.threeMesh.material = new THREE.MeshStandardMaterial({ 
-                color: 0xff0000,
-                metalness: mesh.threeMesh.userData.originalMaterial.metalness || 0.1,
-                roughness: mesh.threeMesh.userData.originalMaterial.roughness || 0.7
+            mesh.threeMeshes.forEach(threeMesh => {
+                if (!threeMesh.userData.originalMaterial) {
+                    threeMesh.userData.originalMaterial = threeMesh.material.clone();
+                }
+                threeMesh.material = new THREE.MeshStandardMaterial({ 
+                    color: 0xff0000,
+                    metalness: threeMesh.userData.originalMaterial.metalness || 0.1,
+                    roughness: threeMesh.userData.originalMaterial.roughness || 0.7
+                });
             });
             
             this.updateUI();
@@ -218,9 +229,11 @@ document.addEventListener('alpine:init', () => {
             const mesh = this.findMeshByUuid(this.selectedMeshUuid);
             if (mesh) {
                 // Restore original material
-                if (mesh.threeMesh.userData.originalMaterial) {
-                    mesh.threeMesh.material = mesh.threeMesh.userData.originalMaterial;
-                }
+                mesh.threeMeshes.forEach(threeMesh => {
+                    if (threeMesh.userData.originalMaterial) {
+                        threeMesh.material = threeMesh.userData.originalMaterial;
+                    }
+                });
             }
             
             this.selectedMeshUuid = null;
@@ -237,7 +250,9 @@ document.addEventListener('alpine:init', () => {
             if (!mesh) return;
             
             mesh.isHidden = !mesh.isHidden;
-            mesh.threeMesh.visible = !mesh.isHidden;
+            mesh.threeMeshes.forEach(threeMesh => {
+                threeMesh.visible = !mesh.isHidden;
+            });
             
             // Hide bounding box if this mesh is currently hovered
             if (mesh.isHidden && this.hoveredMeshUuid === uuid) {
@@ -250,28 +265,30 @@ document.addEventListener('alpine:init', () => {
             const mesh = this.findMeshByUuid(uuid);
             if (!mesh) return;
             
-            if (!mesh.threeMesh.userData.originalOpacity) {
-                mesh.threeMesh.userData.originalOpacity = mesh.threeMesh.material.opacity || 1;
-                mesh.threeMesh.userData.originalColor = mesh.threeMesh.material.color ? mesh.threeMesh.material.color.clone() : new THREE.Color(0xffffff);
-                mesh.threeMesh.userData.originalEmissive = mesh.threeMesh.material.emissive ? mesh.threeMesh.material.emissive.clone() : new THREE.Color(0x000000);
-            }
-            
             mesh.isKept = !mesh.isKept;
             
-            if (mesh.isKept) {
-                mesh.threeMesh.material.color.set(0x00ff00);
-                mesh.threeMesh.material.transparent = true;
-                mesh.threeMesh.material.opacity = 0.1;
-                mesh.threeMesh.material.emissive.set(0x004400);
-            } else {
-                mesh.threeMesh.material.color.copy(mesh.threeMesh.userData.originalColor);
-                mesh.threeMesh.material.emissive.copy(mesh.threeMesh.userData.originalEmissive);
-                mesh.threeMesh.material.opacity = mesh.threeMesh.userData.originalOpacity;
-                if (mesh.threeMesh.material.opacity === 1) {
-                    mesh.threeMesh.material.transparent = false;
+            mesh.threeMeshes.forEach(threeMesh => {
+                if (!threeMesh.userData.originalOpacity) {
+                    threeMesh.userData.originalOpacity = threeMesh.material.opacity || 1;
+                    threeMesh.userData.originalColor = threeMesh.material.color ? threeMesh.material.color.clone() : new THREE.Color(0xffffff);
+                    threeMesh.userData.originalEmissive = threeMesh.material.emissive ? threeMesh.material.emissive.clone() : new THREE.Color(0x000000);
                 }
-            }
-            mesh.threeMesh.material.needsUpdate = true;
+                
+                if (mesh.isKept) {
+                    threeMesh.material.color.set(0x00ff00);
+                    threeMesh.material.transparent = true;
+                    threeMesh.material.opacity = 0.1;
+                    threeMesh.material.emissive.set(0x004400);
+                } else {
+                    threeMesh.material.color.copy(threeMesh.userData.originalColor);
+                    threeMesh.material.emissive.copy(threeMesh.userData.originalEmissive);
+                    threeMesh.material.opacity = threeMesh.userData.originalOpacity;
+                    if (threeMesh.material.opacity === 1) {
+                        threeMesh.material.transparent = false;
+                    }
+                }
+                threeMesh.material.needsUpdate = true;
+            });
             this.updateUI();
             
             // Notify export manager to update button state

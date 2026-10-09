@@ -58,6 +58,7 @@ function initializeViewer() {
         
         // Clear mesh manager
         meshManager.allMeshes = [];
+        meshManager.parts = [];
         meshManager.boxes = [];
         meshManager.meshVertices.clear();
         
@@ -71,27 +72,15 @@ function initializeViewer() {
         }
         
         // Process meshes
-        meshManager.processModel(model);
+        meshManager.processModel(model, gltf.parser && gltf.parser.associations);
         model.updateMatrixWorld(true);
         
-        // Process each mesh for UI
-        model.traverse((child) => {
-            if (child.isMesh && child.geometry) {
-                const filteredVertices = meshManager.getFilteredVertices(child);
-                const originalVertexCount = child.geometry?.attributes?.position?.count;
-                const boxInfo = meshManager.extractBoxFromGeometry(filteredVertices, meshManager.getPartName(child), originalVertexCount, child.getWorldScale(new THREE.Vector3()));
-                
-                if (boxInfo) {
-                    const materialName = child.material ? (child.material.name || 'Unnamed Material') : 'No Material';
-                    
-                    if (meshStore) {
-                        meshStore.addMesh({
-                            mesh: child,
-                            boxInfo: boxInfo,
-                            materialName: materialName
-                        });
-                    }
-                }
+        // Process each part for UI
+        meshManager.getParts().forEach((part) => {
+            const partData = meshManager.describePart(part);
+            
+            if (partData && meshStore) {
+                meshStore.addMesh(partData);
             }
         });
         

@@ -291,7 +291,8 @@ class ToolbarManager {
     }
     
     explodeMeshes() {
-        const allMeshes = this.meshManager.getAllMeshes();
+        const parts = this.meshManager.getParts();
+        const allMeshes = parts.map(part => part.object);
         const meshesCenter = this.calculateMeshesCenter(allMeshes);
         const explodeDistance = this.calculateExplodeDistance(allMeshes);
         
@@ -304,7 +305,7 @@ class ToolbarManager {
             }
             
             const meshCenter = new THREE.Vector3();
-            const box = new THREE.Box3().setFromObject(mesh);
+            const box = this.meshManager.getPartBox(parts[index]);
             box.getCenter(meshCenter);
             
             const direction = meshCenter.clone().sub(meshesCenter);
@@ -339,7 +340,7 @@ class ToolbarManager {
     }
     
     implodeMeshes() {
-        const allMeshes = this.meshManager.getAllMeshes();
+        const allMeshes = this.meshManager.getParts().map(part => part.object);
         let completedTweens = 0;
         const totalTweens = allMeshes.length;
         

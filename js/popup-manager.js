@@ -31,11 +31,12 @@ class PopupManager {
         document.body.appendChild(this.line);
     }
     
-    showPopup(mesh, meshData) {
-        this.targetMesh = mesh;
+    showPopup(part, meshData) {
+        this.targetMesh = part.object;
         
-        // Get mesh center position
-        const box = new THREE.Box3().setFromObject(mesh);
+        // Get part center position
+        const box = new THREE.Box3();
+        part.meshes.forEach(mesh => box.expandByObject(mesh));
         box.getCenter(this.targetPosition);
         
         // Create popup content
