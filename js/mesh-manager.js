@@ -260,7 +260,94 @@ export class MeshManager {
         const worldScale = part.object.getWorldScale(new THREE.Vector3());
         const boxInfo = this.extractBoxFromGeometry(vertices, this.getPartName(part), vertexCount, worldScale);
         
-        return boxInfo ? { part, boxInfo, materialName: this.getPartMaterialName(part) } : null;
+        if (!boxInfo) return null;
+        
+        const { boardMaterial, edges } = this.analyzeEdges(part, boxInfo);
+        return {
+            part,
+            boxInfo,
+            materialName: boardMaterial || this.getPartMaterialName(part),
+            allMaterials: this.getPartMaterialName(part),
+            edges
+        };
+    }
+    
+    // Find the board material and edge banding of a panel. Every triangle lying on
+    // one of the six faces of the part's box counts towards that face's material.
+    // The board material is what covers the two large faces; an edge whose
+    // material differs from it is banded. Banded edges are numbered canonically
+    // (L1 before L2, W1 before W2) since a panel's orientation is arbitrary.
+    analyzeEdges(part, boxInfo) {
+        const { min, max, axes } = boxInfo;
+        const extent = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+        const tolerance = extent * 1e-4 + 1e-9;
+        const faceAreas = new Map(); // "axis:side" -> Map(material -> area)
+        
+        const corners = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+        const ab = new THREE.Vector3();
+        const ac = new THREE.Vector3();
+        
+        part.meshes.forEach((mesh) => {
+            const material = this.getMeshMaterialName(mesh);
+            const position = mesh.geometry.getAttribute('position');
+            const index = mesh.geometry.getIndex();
+            const triangleCount = (index ? index.count : position.count) / 3;
+            const toPart = mesh === part.object ? null : mesh.matrix;
+            
+            for (let t = 0; t < triangleCount; t++) {
+                corners.forEach((corner, k) => {
+                    const i = index ? index.getX(t * 3 + k) : t * 3 + k;
+                    corner.fromBufferAttribute(position, i);
+                    if (toPart) corner.applyMatrix4(toPart);
+                });
+                
+                const area = ab.subVectors(corners[1], corners[0]).cross(ac.subVectors(corners[2], corners[0])).length() / 2;
+                if (area === 0) continue;
+                
+                for (let axis = 0; axis < 3; axis++) {
+                    [min[axis], max[axis]].forEach((plane, side) => {
+                        if (corners.every(corner => Math.abs(corner.getComponent(axis) - plane) < tolerance)) {
+                            const key = `${axis}:${side}`;
+                            if (!faceAreas.has(key)) faceAreas.set(key, new Map());
+                            const areas = faceAreas.get(key);
+                            areas.set(material, (areas.get(material) || 0) + area);
+                        }
+                    });
+                }
+            }
+        });
+        
+        const dominant = (...keys) => {
+            const totals = new Map();
+            keys.forEach(key => (faceAreas.get(key) || new Map()).forEach((area, material) => {
+                totals.set(material, (totals.get(material) || 0) + area);
+            }));
+            let best = null;
+            totals.forEach((area, material) => {
+                if (!best || area > totals.get(best)) best = material;
+            });
+            return best;
+        };
+        
+        const [lengthAxis, widthAxis, thicknessAxis] = axes;
+        const boardMaterial = dominant(`${thicknessAxis}:0`, `${thicknessAxis}:1`);
+        
+        // Faces across the width axis run along the length, and vice versa
+        const banding = (faceAxis) => [0, 1]
+            .map(side => dominant(`${faceAxis}:${side}`))
+            .filter(material => material && material !== boardMaterial);
+        const lengthEdges = banding(widthAxis);
+        const widthEdges = banding(lengthAxis);
+        
+        return {
+            boardMaterial,
+            edges: {
+                L1: lengthEdges[0] || null,
+                L2: lengthEdges[1] || null,
+                W1: widthEdges[0] || null,
+                W2: widthEdges[1] || null
+            }
+        };
     }
     
     // Replace a multi-mesh part with one part per mesh

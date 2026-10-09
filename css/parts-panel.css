@@ -2,7 +2,7 @@
     position: fixed;
     top: 20px;
     left: 20px;
-    width: 460px;
+    width: 520px;
     max-height: calc(100vh - 40px);
     background: rgba(0, 0, 0, 0.75);
     border-radius: 6px;
@@ -169,6 +169,25 @@
     color: #87CEEB;
     font-style: italic;
     word-break: break-word;
+}
+
+.parts-table td.edges {
+    white-space: nowrap;
+}
+
+.edge-tag {
+    display: inline-block;
+    padding: 0 3px;
+    margin-right: 2px;
+    border-radius: 3px;
+    background: rgba(255, 209, 102, 0.2);
+    color: #ffd166;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.no-edges {
+    color: rgba(255, 255, 255, 0.3);
 }
 
 .parts-table td.actions {

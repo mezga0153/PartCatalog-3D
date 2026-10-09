@@ -1,6 +1,6 @@
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
-import { groupIdenticalParts } from './cut-list.js';
+import { groupIdenticalParts, bandedEdges } from './cut-list.js';
 
 // Each table row is a group of one or more identical parts
 const COLUMNS = [
@@ -9,7 +9,8 @@ const COLUMNS = [
     { key: 'length', label: 'L', numeric: true, sortValue: row => row.entries[0].size.length },
     { key: 'width', label: 'W', numeric: true, sortValue: row => row.entries[0].size.width },
     { key: 'thickness', label: 'T', numeric: true, sortValue: row => row.entries[0].size.thickness },
-    { key: 'material', label: 'Material', sortValue: row => row.entries[0].materialName }
+    { key: 'material', label: 'Material', sortValue: row => row.entries[0].materialName },
+    { key: 'edges', label: 'Edges', numeric: true, sortValue: row => bandedEdges(row.entries[0]).length }
 ];
 
 // "a, b, c +2 more" for combined rows
@@ -139,7 +140,7 @@ export class PartsTable {
         let entries = this.store.meshes.slice();
         
         if (this.search) {
-            entries = entries.filter(m => `${m.name} ${m.materialName} ${m.assembly || ''}`.toLowerCase().includes(this.search));
+            entries = entries.filter(m => `${m.name} ${m.allMaterials} ${m.assembly || ''}`.toLowerCase().includes(this.search));
         }
         
         const grouping = GROUPINGS[this.groupBy];
@@ -268,6 +269,7 @@ export class PartsTable {
             <td class="num">${formatLength(entry.size.width)}</td>
             <td class="num">${formatLength(entry.size.thickness)}</td>
             <td class="material">${escapeHtml(entry.materialName)}</td>
+            <td class="edges">${this.formatEdges(entry)}</td>
             <td class="actions"></td>
         `;
         
@@ -297,6 +299,15 @@ export class PartsTable {
         tr.onmouseleave = () => this.store.hideBoundingBoxes(uuids);
         
         return tr;
+    }
+    
+    // Banded edges as small labels, with materials and lengths in the tooltip
+    formatEdges(entry) {
+        const edges = bandedEdges(entry);
+        if (edges.length === 0) return '<span class="no-edges" title="No edge banding detected">–</span>';
+        
+        const title = edges.map(([name, material, length]) => `${name}: ${material}, ${formatLength(length)} mm`).join('\n');
+        return `<span title="${escapeHtml(title)}">${edges.map(([name]) => `<span class="edge-tag">${name}</span>`).join('')}</span>`;
     }
     
     createAction(icon, title, onClick, state = '') {
