@@ -1,6 +1,7 @@
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
 import { groupIdenticalParts, bandedEdges, totalQuantity, GRAIN_LABELS } from './cut-list.js';
+import { readSetting, writeSetting } from './storage.js';
 
 // Each table row is a group of one or more identical parts
 const COLUMNS = [
@@ -42,12 +43,14 @@ export class PartsTable {
         this.store = store;
         this.container = container;
         this.countEl = countEl;
-        this.sortKey = null;
-        this.sortDir = 1;
         this.search = '';
-        this.combineIdentical = true;
-        this.groupBy = 'none';
         this.collapsedSections = new Set();
+        
+        const settings = readSetting('table', { sortKey: null, sortDir: 1, combineIdentical: true, groupBy: 'none' });
+        this.sortKey = settings.sortKey;
+        this.sortDir = settings.sortDir;
+        this.combineIdentical = settings.combineIdentical;
+        this.groupBy = GROUPINGS[settings.groupBy] !== undefined ? settings.groupBy : 'none';
         
         this.build();
         store.subscribe(() => this.render());
@@ -102,6 +105,9 @@ export class PartsTable {
             headRow.appendChild(th);
         });
         headRow.appendChild(document.createElement('th'));
+        
+        this.container.querySelector('.group-by').value = this.groupBy;
+        this.container.querySelector('.combine-identical').checked = this.combineIdentical;
         
         this.container.querySelector('.group-by').addEventListener('change', (event) => {
             this.groupBy = event.target.value;
@@ -177,7 +183,17 @@ export class PartsTable {
         return rows;
     }
     
+    saveSettings() {
+        writeSetting('table', {
+            sortKey: this.sortKey,
+            sortDir: this.sortDir,
+            combineIdentical: this.combineIdentical,
+            groupBy: this.groupBy
+        });
+    }
+    
     render() {
+        this.saveSettings();
         const sections = this.getSections();
         const shownEntries = sections.flatMap(section => section.entries);
         const total = this.store.meshes.length;

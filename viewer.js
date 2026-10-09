@@ -83,6 +83,7 @@ function initializeViewer() {
         
         // Clear UI store
         if (meshStore) {
+            meshStore.modelKey = null;
             meshStore.meshes = [];
             meshStore.selectedUuids.clear();
             meshStore.hideBoundingBoxes();
@@ -101,6 +102,8 @@ function initializeViewer() {
                 meshStore.addMesh(partData);
             }
         });
+        
+        meshStore.restoreEdits(filename);
         
         sceneManager.scene.add(model);
         toolbarManager.resetExplodeState();

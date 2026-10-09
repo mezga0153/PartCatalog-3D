@@ -1,13 +1,14 @@
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
 import { summarize } from './cut-list.js';
+import { readSetting, writeSetting } from './storage.js';
 
 // Totals for ordering: board area and sheets per material, and banding length
 export class SummaryPanel {
     constructor(store, container) {
         this.store = store;
         this.container = container;
-        this.sheet = { length: 2800, width: 2070, waste: 10 };
+        this.sheet = readSetting('sheet', { length: 2800, width: 2070, waste: 10 });
         
         this.build();
         store.subscribe(() => this.render());
@@ -31,6 +32,7 @@ export class SummaryPanel {
                 const value = parseFloat(input.value);
                 if (Number.isFinite(value) && value >= 0) {
                     this.sheet[input.dataset.key] = value;
+                    writeSetting('sheet', this.sheet);
                     this.render();
                 }
             });

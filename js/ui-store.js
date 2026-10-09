@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { formatSize } from './units.js';
+import { modelKey, loadEdits, saveEdits } from './storage.js';
 
 // Shared materials for highlighted and excluded parts
 const selectedMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.1, roughness: 0.7 });
@@ -126,6 +127,24 @@ export const meshStore = {
     
     updateUI() {
         this.listeners.forEach(listener => listener());
+        this.scheduleSave();
+    },
+    
+    // Remember edits (names, quantities, notes, exclusions) for this model
+    modelKey: null,
+    saveTimer: null,
+    
+    restoreEdits(filename) {
+        this.modelKey = modelKey(filename, this.meshes);
+        loadEdits(this.modelKey, this.meshes);
+        this.meshes.forEach(mesh => this.refreshAppearance(mesh));
+        this.updateUI();
+    },
+    
+    scheduleSave() {
+        if (!this.modelKey) return;
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => saveEdits(this.modelKey, this.meshes), 300);
     },
     
     findMeshByUuid(uuid) {
