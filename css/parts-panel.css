@@ -378,3 +378,20 @@
 .parts-table td.qty .inline-edit {
     width: 52px;
 }
+
+.dimension-labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.dimension-label {
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #ffd166;
+    font: 600 12px sans-serif;
+    white-space: nowrap;
+}

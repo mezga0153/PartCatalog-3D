@@ -3,6 +3,7 @@ import { meshStore } from './js/ui-store.js';
 import { PartsTable } from './js/parts-table.js';
 import { SummaryPanel } from './js/summary-panel.js';
 import { setupSidebarTabs } from './js/sidebar.js';
+import { DimensionOverlay } from './js/dimensions.js';
 import { SceneManager } from './js/scene.js';
 import { CameraManager } from './js/camera.js';
 import { MeshManager } from './js/mesh-manager.js';
@@ -59,6 +60,10 @@ function initializeViewer() {
     // Initialize interaction
     const interactionManager = new InteractionManager(renderer, cameraManager.camera, meshManager);
 
+    // Dimension lines on the selected part
+    const dimensionOverlay = new DimensionOverlay(sceneManager.scene, cameraManager.camera, document.body);
+    meshStore.subscribe(() => dimensionOverlay.sync(meshStore));
+    
     // Initialize export manager
     window.exportManager = new ExportManager(() => summaryPanel.sheet);
 
@@ -165,6 +170,7 @@ function initializeViewer() {
         interactionManager.updatePopup();
         
         renderer.render(sceneManager.scene, cameraManager.camera);
+        dimensionOverlay.update();
     };
 
     // Handle window resize
@@ -174,6 +180,7 @@ function initializeViewer() {
         
         cameraManager.handleResize(newCanvasWidth, newCanvasHeight);
         renderer.setSize(newCanvasWidth, newCanvasHeight);
+        dimensionOverlay.setSize(newCanvasWidth, newCanvasHeight);
     };
 
     window.addEventListener('resize', handleResize);

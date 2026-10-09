@@ -48,6 +48,8 @@ export const meshStore = {
             quantity: 1, // How many to cut of this part; can be edited
             notes: '',
             size: meshData.boxInfo.size_mm,
+            // Part-local bounds and which local axes are length, width and thickness
+            box: { min: meshData.boxInfo.min, max: meshData.boxInfo.max, axes: meshData.boxInfo.axes },
             dimensions: formatSize(meshData.boxInfo.size_mm),
             vertexCount: meshData.boxInfo.vertexCount,
             materialName: meshData.materialName,
