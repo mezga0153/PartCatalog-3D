@@ -20,6 +20,20 @@ function rowName(row) {
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
+const UNGROUPED = 'Ungrouped';
+
+// Ways to split the table into sections
+const GROUPINGS = {
+    none: null,
+    material: { label: 'Material', key: m => m.materialName },
+    assembly: { label: 'Assembly', key: m => m.assembly || UNGROUPED }
+};
+
+// Board area of parts in m²
+function areaOf(entries) {
+    return entries.reduce((sum, m) => sum + m.size.length * m.size.width, 0) / 1e6;
+}
+
 // Compact, sortable and searchable table of the parts in the store
 export class PartsTable {
     constructor(store, container) {
@@ -29,6 +43,8 @@ export class PartsTable {
         this.sortDir = 1;
         this.search = '';
         this.combineIdentical = true;
+        this.groupBy = 'none';
+        this.collapsedSections = new Set();
         
         this.build();
         store.onChange = () => this.render();
@@ -40,7 +56,16 @@ export class PartsTable {
             <div class="parts-header">
                 <h5>Parts <span class="parts-count badge"></span></h5>
                 <input type="search" class="form-control form-control-sm parts-search" placeholder="Search name or material">
-                <label class="parts-option"><input type="checkbox" class="form-check-input combine-identical" checked> Combine identical parts</label>
+                <div class="parts-options">
+                    <label class="parts-option"><input type="checkbox" class="form-check-input combine-identical" checked> Combine identical parts</label>
+                    <label class="parts-option">Group by
+                        <select class="form-select form-select-sm group-by">
+                            <option value="none">None</option>
+                            <option value="material">Material</option>
+                            <option value="assembly">Assembly</option>
+                        </select>
+                    </label>
+                </div>
             </div>
             <div class="parts-scroll">
                 <table class="parts-table">
@@ -63,7 +88,8 @@ export class PartsTable {
         includeTh.innerHTML = '<input type="checkbox" class="form-check-input" title="Include all / none">';
         this.includeAll = includeTh.querySelector('input');
         this.includeAll.onchange = () => {
-            this.store.setIncluded(this.getRows().flatMap(row => row.entries.map(m => m.uuid)), this.includeAll.checked);
+            const uuids = this.getSections().flatMap(section => section.entries.map(m => m.uuid));
+            this.store.setIncluded(uuids, this.includeAll.checked);
         };
         headRow.appendChild(includeTh);
         COLUMNS.forEach(column => {
@@ -75,6 +101,11 @@ export class PartsTable {
             headRow.appendChild(th);
         });
         headRow.appendChild(document.createElement('th'));
+        
+        this.container.querySelector('.group-by').addEventListener('change', (event) => {
+            this.groupBy = event.target.value;
+            this.render();
+        });
         
         this.container.querySelector('.combine-identical').addEventListener('change', (event) => {
             this.combineIdentical = event.target.checked;
@@ -103,13 +134,32 @@ export class PartsTable {
         this.render();
     }
     
-    getRows() {
+    // Sections of rows; a single unnamed section when not grouping
+    getSections() {
         let entries = this.store.meshes.slice();
         
         if (this.search) {
-            entries = entries.filter(m => `${m.name} ${m.materialName}`.toLowerCase().includes(this.search));
+            entries = entries.filter(m => `${m.name} ${m.materialName} ${m.assembly || ''}`.toLowerCase().includes(this.search));
         }
         
+        const grouping = GROUPINGS[this.groupBy];
+        if (!grouping) {
+            return [{ key: null, entries, rows: this.getRows(entries) }];
+        }
+        
+        const byKey = new Map();
+        entries.forEach(entry => {
+            const key = grouping.key(entry);
+            if (!byKey.has(key)) byKey.set(key, []);
+            byKey.get(key).push(entry);
+        });
+        
+        return [...byKey.keys()]
+            .sort((a, b) => (a === UNGROUPED) - (b === UNGROUPED) || collator.compare(a, b))
+            .map(key => ({ key, entries: byKey.get(key), rows: this.getRows(byKey.get(key)) }));
+    }
+    
+    getRows(entries) {
         const rows = (this.combineIdentical ? groupIdenticalParts(entries) : entries.map(m => [m]))
             .map(group => ({ entries: group }));
         
@@ -127,8 +177,8 @@ export class PartsTable {
     }
     
     render() {
-        const rows = this.getRows();
-        const shownEntries = rows.flatMap(row => row.entries);
+        const sections = this.getSections();
+        const shownEntries = sections.flatMap(section => section.entries);
         const total = this.store.meshes.length;
         
         this.countEl.textContent = shownEntries.length === total ? `${total}` : `${shownEntries.length} / ${total}`;
@@ -147,9 +197,44 @@ export class PartsTable {
         this.includeAll.disabled = shownEntries.length === 0;
         
         this.tbody.innerHTML = '';
-        rows.forEach(row => this.tbody.appendChild(this.createRow(row)));
+        sections.forEach(section => {
+            const sectionId = `${this.groupBy}:${section.key}`;
+            const isCollapsed = this.collapsedSections.has(sectionId);
+            
+            if (section.key !== null) {
+                this.tbody.appendChild(this.createSectionRow(section, sectionId, isCollapsed));
+            }
+            if (!isCollapsed) {
+                section.rows.forEach(row => this.tbody.appendChild(this.createRow(row)));
+            }
+        });
         
-        this.emptyEl.textContent = total === 0 ? 'Load a model to see its parts.' : (rows.length === 0 ? 'No parts match your search.' : '');
+        this.emptyEl.textContent = total === 0 ? 'Load a model to see its parts.' : (shownEntries.length === 0 ? 'No parts match your search.' : '');
+    }
+    
+    createSectionRow(section, sectionId, isCollapsed) {
+        const included = section.entries.filter(m => m.isIncluded);
+        const fromName = this.groupBy === 'assembly' && section.entries.some(m => m.assemblyFromName);
+        
+        const tr = document.createElement('tr');
+        tr.className = 'section-row';
+        tr.innerHTML = `
+            <td colspan="${COLUMNS.length + 2}">
+                <i class="bi ${isCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'}"></i>
+                <span class="section-name" ${fromName ? 'title="Grouped by name prefix"' : ''}>${escapeHtml(section.key)}</span>
+                <span class="section-totals">${section.entries.length} part${section.entries.length === 1 ? '' : 's'} · ${areaOf(included).toFixed(2)} m²</span>
+            </td>
+        `;
+        tr.onclick = () => {
+            if (isCollapsed) {
+                this.collapsedSections.delete(sectionId);
+            } else {
+                this.collapsedSections.add(sectionId);
+            }
+            this.render();
+        };
+        
+        return tr;
     }
     
     createRow(row) {
@@ -177,7 +262,7 @@ export class PartsTable {
         
         tr.innerHTML = `
             <td class="include"><input type="checkbox" class="form-check-input" title="Include in cut list"></td>
-            <td class="name"><div title="${escapeHtml(entries.map(m => m.name).join('\n'))}">${escapeHtml(rowName(row))}</div>${note}</td>
+            <td class="name"><div class="part-name" title="${escapeHtml(entries.map(m => m.name).join('\n'))}">${escapeHtml(rowName(row))}</div>${note}</td>
             <td class="num qty" ${this.combineIdentical ? '' : 'hidden'}>${entries.length}</td>
             <td class="num">${formatLength(entry.size.length)}</td>
             <td class="num">${formatLength(entry.size.width)}</td>

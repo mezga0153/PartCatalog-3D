@@ -12,6 +12,7 @@ export class MeshManager {
     processModel(model, associations) {
         this.collectMeshes(model);
         this.collectParts(associations);
+        this.assignAssemblies(model);
         this.compactGeometries();
         this.processVertices();
         this.enhanceMaterials(model);
@@ -46,6 +47,37 @@ export class MeshManager {
             }
             part.meshes.push(mesh);
             this.partByMesh.set(mesh, part);
+        });
+    }
+    
+    // The assembly of a part (e.g. a cabinet) is its top-most named ancestor that
+    // doesn't contain every part. Without such a hierarchy, fall back to a name
+    // prefix like "k1" in "k1 - dol".
+    assignAssemblies(model) {
+        const partsUnder = new Map();
+        const ancestorsOf = new Map();
+        
+        this.parts.forEach((part) => {
+            const ancestors = [];
+            for (let node = part.object.parent; node && node !== model.parent; node = node.parent) {
+                ancestors.unshift(node);
+                partsUnder.set(node, (partsUnder.get(node) || 0) + 1);
+            }
+            ancestorsOf.set(part, ancestors);
+        });
+        
+        this.parts.forEach((part) => {
+            const assemblyNode = ancestorsOf.get(part).find(node =>
+                (node.userData.name || node.name) && partsUnder.get(node) < this.parts.length);
+            
+            if (assemblyNode) {
+                part.assembly = assemblyNode.userData.name || assemblyNode.name;
+                part.assemblyFromName = false;
+            } else {
+                const match = (part.object.userData.name || part.object.name).match(/^(.+?)\s+[-–:]\s+/);
+                part.assembly = match ? match[1] : null;
+                part.assemblyFromName = !!match;
+            }
         });
     }
     
@@ -231,7 +263,13 @@ export class MeshManager {
         const part = this.parts[index];
         if (!part || part.meshes.length < 2) return [];
         
-        const pieces = part.meshes.map(mesh => ({ object: mesh, meshes: [mesh], splitFrom: part }));
+        const pieces = part.meshes.map(mesh => ({
+            object: mesh,
+            meshes: [mesh],
+            splitFrom: part,
+            assembly: part.assembly,
+            assemblyFromName: part.assemblyFromName
+        }));
         this.parts.splice(index, 1, ...pieces);
         pieces.forEach(piece => this.partByMesh.set(piece.object, piece));
         

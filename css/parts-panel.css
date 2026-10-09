@@ -52,6 +52,41 @@
     box-shadow: none;
 }
 
+.parts-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+}
+
+.parts-option .form-select {
+    width: auto;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    font-size: 0.78rem;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+.parts-option .form-select option {
+    color: black;
+}
+
+.parts-table tbody tr.section-row td {
+    background: rgba(135, 206, 235, 0.12);
+    color: #87CEEB;
+    font-weight: 700;
+    padding: 6px;
+}
+
+.parts-table tbody tr.section-row .section-totals {
+    float: right;
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.7);
+}
+
 .parts-option {
     display: flex;
     align-items: center;

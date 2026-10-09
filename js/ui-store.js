@@ -39,6 +39,8 @@ export const meshStore = {
             dimensions: formatSize(meshData.boxInfo.size_mm),
             vertexCount: meshData.boxInfo.vertexCount,
             materialName: meshData.materialName,
+            assembly: part.assembly,
+            assemblyFromName: part.assemblyFromName,
             isHidden: false,
             isIncluded: true,
             threeObject: part.object,
