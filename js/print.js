@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
-import { groupIdenticalParts, cutListRows, summarize, bandedEdges } from './cut-list.js';
+import { groupIdenticalParts, cutListRows, summarize, bandedEdges, totalQuantity } from './cut-list.js';
 
 // Render a small picture of a part on its own, using its own materials
 function renderThumbnails(groups) {
@@ -84,8 +84,10 @@ function panelDiagram(entry) {
 }
 
 // Open the browser's print dialog with a cut list (save as PDF from there)
-export function printCutList(entries, sheet, modelName) {
+export function printCutList(allEntries, sheet, modelName) {
+    const entries = allEntries.filter(entry => (entry.quantity ?? 1) > 0);
     const groups = groupIdenticalParts(entries);
+    const pieces = totalQuantity(entries);
     const rows = cutListRows(entries);
     const thumbnails = renderThumbnails(groups);
     const { boards, banding } = summarize(entries, sheet);
@@ -110,7 +112,7 @@ export function printCutList(entries, sheet, modelName) {
     .legend { color: #666; font-size: 8.5pt; margin-top: 6px; }
 </style></head><body>
     <h1>Cut list – ${escapeHtml(modelName)}</h1>
-    <div class="meta">${date} · ${entries.length} part${entries.length === 1 ? '' : 's'} in ${rows.length} line${rows.length === 1 ? '' : 's'}</div>
+    <div class="meta">${date} · ${pieces} piece${pieces === 1 ? '' : 's'} in ${rows.length} line${rows.length === 1 ? '' : 's'}</div>
     <table>
         <thead><tr><th>No.</th><th>Picture</th><th>Part</th><th class="num">Qty</th><th class="num">L</th><th class="num">W</th><th class="num">T</th><th>Material</th><th>Edges &amp; grain</th><th>Banding</th><th>Notes</th></tr></thead>
         <tbody>${rows.map((row, i) => `

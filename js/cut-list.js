@@ -2,6 +2,11 @@ import { formatLength } from './units.js';
 
 export const EDGE_NAMES = ['L1', 'L2', 'W1', 'W2'];
 
+// Number of pieces to cut for a set of parts
+export function totalQuantity(entries) {
+    return entries.reduce((sum, entry) => sum + (entry.quantity ?? 1), 0);
+}
+
 // Banded edges as [name, material, length in mm]
 export function bandedEdges(entry) {
     return EDGE_NAMES
@@ -38,19 +43,20 @@ export function summarize(entries, sheet) {
     const boards = new Map();
     const banding = new Map();
     
-    entries.forEach(entry => {
+    entries.filter(entry => (entry.quantity ?? 1) > 0).forEach(entry => {
         const thickness = Math.round(entry.size.thickness * 10) / 10;
         const key = `${entry.materialName}|${thickness}`;
         if (!boards.has(key)) boards.set(key, { material: entry.materialName, thickness, count: 0, area: 0 });
         const board = boards.get(key);
-        board.count++;
-        board.area += entry.size.length * entry.size.width / 1e6;
+        const quantity = entry.quantity ?? 1;
+        board.count += quantity;
+        board.area += quantity * entry.size.length * entry.size.width / 1e6;
         
         bandedEdges(entry).forEach(([, material, length]) => {
             if (!banding.has(material)) banding.set(material, { material, count: 0, length: 0 });
             const band = banding.get(material);
-            band.count++;
-            band.length += length / 1000;
+            band.count += quantity;
+            band.length += quantity * length / 1000;
         });
     });
     
@@ -72,14 +78,14 @@ export function summarize(entries, sheet) {
 export function cutListRows(entries) {
     const round = value => Math.round(value * 10) / 10;
     
-    return groupIdenticalParts(entries).map((group, index) => {
+    return groupIdenticalParts(entries.filter(entry => (entry.quantity ?? 1) > 0)).map((group, index) => {
         const entry = group[0];
         const notes = [...new Set(group.map(m => m.notes).filter(Boolean))];
         
         return {
             'No.': index + 1,
             'Part': [...new Set(group.map(m => m.name))].join(', '),
-            'Qty': group.length,
+            'Qty': totalQuantity(group),
             'Length (mm)': round(entry.size.length),
             'Width (mm)': round(entry.size.width),
             'Thickness (mm)': round(entry.size.thickness),

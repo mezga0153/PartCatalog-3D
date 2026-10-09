@@ -1,11 +1,11 @@
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
-import { groupIdenticalParts, bandedEdges, GRAIN_LABELS } from './cut-list.js';
+import { groupIdenticalParts, bandedEdges, totalQuantity, GRAIN_LABELS } from './cut-list.js';
 
 // Each table row is a group of one or more identical parts
 const COLUMNS = [
     { key: 'name', label: 'Part', sortValue: row => rowName(row) },
-    { key: 'qty', label: 'Qty', numeric: true, combinedOnly: true, sortValue: row => row.entries.length },
+    { key: 'qty', label: 'Qty', numeric: true, sortValue: row => totalQuantity(row.entries) },
     { key: 'length', label: 'L', numeric: true, sortValue: row => row.entries[0].size.length },
     { key: 'width', label: 'W', numeric: true, sortValue: row => row.entries[0].size.width },
     { key: 'thickness', label: 'T', numeric: true, sortValue: row => row.entries[0].size.thickness },
@@ -33,7 +33,7 @@ const GROUPINGS = {
 
 // Board area of parts in m²
 function areaOf(entries) {
-    return entries.reduce((sum, m) => sum + m.size.length * m.size.width, 0) / 1e6;
+    return entries.reduce((sum, m) => sum + m.quantity * m.size.length * m.size.width, 0) / 1e6;
 }
 
 // Compact, sortable and searchable table of the parts in the store
@@ -189,7 +189,6 @@ export class PartsTable {
             const column = COLUMNS.find(c => c.key === th.dataset.key);
             const arrow = this.sortKey === column.key ? (this.sortDir === 1 ? ' ▲' : ' ▼') : '';
             th.textContent = column.label + arrow;
-            th.hidden = column.combinedOnly && !this.combineIdentical;
         });
         
         const includedCount = shownEntries.filter(m => m.isIncluded).length;
@@ -223,7 +222,7 @@ export class PartsTable {
             <td colspan="${COLUMNS.length + 2}">
                 <i class="bi ${isCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'}"></i>
                 <span class="section-name" ${fromName ? 'title="Grouped by name prefix"' : ''}>${escapeHtml(section.key)}</span>
-                <span class="section-totals">${section.entries.length} part${section.entries.length === 1 ? '' : 's'} · ${areaOf(included).toFixed(2)} m²</span>
+                <span class="section-totals">${totalQuantity(section.entries)} part${totalQuantity(section.entries) === 1 ? '' : 's'} · ${areaOf(included).toFixed(2)} m²</span>
             </td>
         `;
         tr.onclick = () => {
@@ -255,16 +254,20 @@ export class PartsTable {
         ].join(' ');
         
         let note = '';
+        const notes = [...new Set(entries.map(m => m.notes).filter(Boolean))];
+        if (notes.length) {
+            note += `<div class="part-user-note"><i class="bi bi-sticky"></i> ${escapeHtml(notes.join('; '))}</div>`;
+        }
         if (!isCombined && entry.splitFromUuid) {
-            note = `<div class="part-note" title="One mesh per material; use merge to join them again"><i class="bi bi-scissors"></i> Split piece of ${escapeHtml(entry.name)}</div>`;
+            note += `<div class="part-note" title="One mesh per material; use merge to join them again"><i class="bi bi-scissors"></i> Split piece of ${escapeHtml(entry.name)}</div>`;
         } else if (!isCombined && entry.mergedCount > 1) {
-            note = `<div class="part-note" title="This part was made of ${entry.mergedCount} meshes, one per material; they are listed as one part"><i class="bi bi-layers"></i> Merged: ${entry.mergedCount} materials</div>`;
+            note += `<div class="part-note" title="This part was made of ${entry.mergedCount} meshes, one per material; they are listed as one part"><i class="bi bi-layers"></i> Merged: ${entry.mergedCount} materials</div>`;
         }
         
         tr.innerHTML = `
             <td class="include"><input type="checkbox" class="form-check-input" title="Include in cut list"></td>
-            <td class="name"><div class="part-name" title="${escapeHtml(entries.map(m => m.name).join('\n'))}">${escapeHtml(rowName(row))}</div>${note}</td>
-            <td class="num qty" ${this.combineIdentical ? '' : 'hidden'}>${entries.length}</td>
+            <td class="name"><div class="part-name" title="${escapeHtml(entries.map(m => m.name).join('\n'))}&#10;Double-click to rename">${escapeHtml(rowName(row))}</div>${note}</td>
+            <td class="num qty" title="${isCombined ? 'Turn off Combine identical parts to change quantities per part' : 'Double-click to change the quantity'}">${totalQuantity(entries)}</td>
             <td class="num">${formatLength(entry.size.length)}</td>
             <td class="num">${formatLength(entry.size.width)}</td>
             <td class="num">${formatLength(entry.size.thickness)}</td>
@@ -280,12 +283,37 @@ export class PartsTable {
         checkbox.onclick = (event) => event.stopPropagation();
         checkbox.onchange = () => this.store.setIncluded(uuids, checkbox.checked);
         
+        const nameEl = tr.querySelector('.part-name');
+        nameEl.ondblclick = (event) => {
+            event.stopPropagation();
+            this.editInline(nameEl, isCombined && new Set(entries.map(m => m.name)).size > 1 ? '' : entry.name, 'Name (empty to reset)',
+                value => this.store.rename(uuids, value.trim()));
+        };
+        
+        if (!isCombined) {
+            const qtyEl = tr.querySelector('.qty');
+            qtyEl.ondblclick = (event) => {
+                event.stopPropagation();
+                this.editInline(qtyEl, String(entry.quantity), 'Quantity', value => {
+                    const quantity = parseInt(value, 10);
+                    if (Number.isFinite(quantity) && quantity >= 0) this.store.setQuantity(entry.uuid, quantity);
+                }, 'number');
+            };
+        }
+        
         const actions = tr.querySelector('.actions');
         actions.appendChild(this.createAction(
             isHidden ? 'bi-eye-slash' : 'bi-eye',
             isHidden ? 'Show' : 'Hide',
             () => this.store.setHidden(uuids, !isHidden),
             isHidden ? 'muted' : ''
+        ));
+        actions.appendChild(this.createAction(
+            notes.length ? 'bi-sticky-fill' : 'bi-sticky',
+            notes.length ? 'Edit note' : 'Add note',
+            () => this.editInline(tr.querySelector('td.name'), notes.join('; '), 'Note for the cut list',
+                value => this.store.setNotes(uuids, value.trim())),
+            notes.length ? 'active' : ''
         ));
         if (!isCombined && (entry.mergedCount > 1 || entry.splitFromUuid)) {
             actions.appendChild(this.createAction(
@@ -300,6 +328,41 @@ export class PartsTable {
         tr.onmouseleave = () => this.store.hideBoundingBoxes(uuids);
         
         return tr;
+    }
+    
+    // Replace an element's content with an input; Enter or leaving it commits, Escape cancels
+    editInline(element, value, placeholder, onCommit, type = 'text') {
+        const input = document.createElement('input');
+        input.type = type;
+        input.className = 'form-control form-control-sm inline-edit';
+        input.value = value;
+        input.placeholder = placeholder;
+        if (type === 'number') input.min = '0';
+        
+        let done = false;
+        const finish = (commit) => {
+            if (done) return;
+            done = true;
+            if (commit) {
+                onCommit(input.value);
+            } else {
+                this.render();
+            }
+        };
+        
+        input.onclick = (event) => event.stopPropagation();
+        input.ondblclick = (event) => event.stopPropagation();
+        input.onkeydown = (event) => {
+            if (event.key === 'Enter') finish(true);
+            if (event.key === 'Escape') finish(false);
+            event.stopPropagation();
+        };
+        input.onblur = () => finish(true);
+        
+        element.innerHTML = '';
+        element.appendChild(input);
+        input.focus();
+        input.select();
     }
     
     // Banded edges as small labels, with materials and lengths in the tooltip

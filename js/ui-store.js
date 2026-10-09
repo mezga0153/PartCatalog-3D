@@ -35,6 +35,9 @@ export const meshStore = {
         return {
             uuid: part.object.uuid,
             name: meshData.boxInfo.name,
+            originalName: meshData.boxInfo.name,
+            quantity: 1, // How many to cut of this part; can be edited
+            notes: '',
             size: meshData.boxInfo.size_mm,
             dimensions: formatSize(meshData.boxInfo.size_mm),
             vertexCount: meshData.boxInfo.vertexCount,
@@ -80,14 +83,29 @@ export const meshStore = {
             const index = this.meshes.indexOf(siblings[0]);
             this.meshes = this.meshes.filter(m => !siblings.includes(m));
             if (partData) {
-                this.meshes.splice(index, 0, { ...this.createEntry(partData), isHidden, isIncluded });
+                const notes = [...new Set(siblings.map(m => m.notes).filter(Boolean))].join('; ');
+                this.meshes.splice(index, 0, {
+                    ...this.createEntry(partData),
+                    isHidden,
+                    isIncluded,
+                    name: siblings[0].name,
+                    quantity: siblings[0].quantity,
+                    notes
+                });
             }
         } else {
             // Pieces inherit hidden/included state; their meshes already look that way
             const pieces = meshManager.splitPart(uuid)
                 .map(piece => meshManager.describePart(piece))
                 .filter(Boolean)
-                .map(partData => ({ ...this.createEntry(partData), isHidden: entry.isHidden, isIncluded: entry.isIncluded }));
+                .map(partData => ({
+                    ...this.createEntry(partData),
+                    isHidden: entry.isHidden,
+                    isIncluded: entry.isIncluded,
+                    name: entry.name,
+                    quantity: entry.quantity,
+                    notes: entry.notes
+                }));
             if (pieces.length === 0) return;
             
             this.meshes.splice(this.meshes.indexOf(entry), 1, ...pieces);
@@ -266,6 +284,30 @@ export const meshStore = {
         if (window.exportManager) {
             window.exportManager.updateButtonState();
         }
+    },
+    
+    rename(uuids, name) {
+        uuids.forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (mesh) mesh.name = name || mesh.originalName;
+        });
+        this.updateUI();
+    },
+    
+    setQuantity(uuid, quantity) {
+        const mesh = this.findMeshByUuid(uuid);
+        if (!mesh) return;
+        
+        mesh.quantity = Math.max(0, Math.round(quantity));
+        this.updateUI();
+    },
+    
+    setNotes(uuids, notes) {
+        uuids.forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (mesh) mesh.notes = notes;
+        });
+        this.updateUI();
     },
     
     toggleIncluded(uuid) {

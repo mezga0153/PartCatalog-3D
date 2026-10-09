@@ -352,3 +352,24 @@
     color: rgba(255, 255, 255, 0.55);
     font-size: 0.72rem;
 }
+
+.part-user-note {
+    font-weight: normal;
+    font-style: italic;
+    font-size: 0.72rem;
+    color: #ffd166;
+    margin-top: 2px;
+}
+
+.inline-edit.form-control {
+    padding: 0 4px;
+    font-size: 0.78rem;
+    min-width: 60px;
+    background: rgba(255, 255, 255, 0.12);
+    border-color: #87CEEB;
+    color: white;
+}
+
+.parts-table td.qty .inline-edit {
+    width: 52px;
+}

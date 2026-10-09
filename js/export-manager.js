@@ -1,5 +1,5 @@
 import { meshStore } from './ui-store.js';
-import { cutListRows, summarize } from './cut-list.js';
+import { cutListRows, summarize, totalQuantity } from './cut-list.js';
 import { escapeHtml } from './html.js';
 import { printCutList } from './print.js';
 
@@ -113,7 +113,7 @@ export class ExportManager {
             
             const filename = this.getFilename('xlsx');
             XLSX.writeFile(workbook, filename);
-            this.showExportSuccess(parts.length, filename);
+            this.showExportSuccess(totalQuantity(parts), filename);
         } catch (error) {
             console.error('Export error:', error);
             alert('Failed to export data. Please try again.');
@@ -143,7 +143,7 @@ export class ExportManager {
         link.click();
         setTimeout(() => URL.revokeObjectURL(link.href), 1000);
         
-        this.showExportSuccess(parts.length, filename);
+        this.showExportSuccess(totalQuantity(parts), filename);
     }
     
     showExportSuccess(count, filename) {
@@ -172,7 +172,7 @@ export class ExportManager {
                 <div>
                     <div style="font-weight: bold;">Export Successful!</div>
                     <div style="font-size: 12px; opacity: 0.9;">
-                        ${count} part${count === 1 ? '' : 's'} exported to ${escapeHtml(filename)}
+                        ${count} piece${count === 1 ? '' : 's'} exported to ${escapeHtml(filename)}
                     </div>
                 </div>
             </div>
