@@ -11,7 +11,6 @@ import { ToolbarManager } from './js/toolbar.js';
 import { InteractionManager } from './js/interaction.js';
 import { FileUploadManager } from './js/file-upload-manager.js';
 import { ExportManager } from './js/export-manager.js';
-import { createGLTFLoader } from './js/loader.js';
 
 initializeViewer();
 
@@ -112,41 +111,13 @@ function initializeViewer() {
     // Make processLoadedModel available globally for the toolbar
     window.processLoadedModel = processLoadedModel;
 
-    // Function to load demo model
-    function loadDemoModel() {
-        const loader = createGLTFLoader();
-        const demoUrl = './demo.glb'; // Load from project root
-        
-        console.log('Loading demo model...');
-        
-        loader.load(
-            demoUrl,
-            (gltf) => {
-                console.log('Demo model loaded successfully');
-                processLoadedModel(gltf, 'demo.glb');
-            },
-            (progress) => {
-                console.log('Demo loading progress:', progress);
-            },
-            (error) => {
-                console.warn('Failed to load demo model:', error);
-                console.log('Demo model not available, showing file upload dialog');
-                // Show upload dialog if demo fails to load
-                if (window.fileUploadManager) {
-                    window.fileUploadManager.show();
-                }
-            }
-        );
-    }
-
     // Initialize file upload manager
     const fileUploadManager = new FileUploadManager(processLoadedModel);
 
     // Make file upload manager available globally for the toolbar
     window.fileUploadManager = fileUploadManager;
 
-    // Show upload dialog on startup instead of auto-loading demo
-    // Users can click "View Demo" if they want to see the demo model
+    // The upload dialog opens on startup; its "View Demo" button loads demo.glb
 
     // Animation loop
     const animate = () => {
