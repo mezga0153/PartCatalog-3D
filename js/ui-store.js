@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { escapeHtml } from './html.js';
 import { formatSize } from './units.js';
 
 // UI state for the parts list (plain object; keep three.js objects out of reactive proxies)
@@ -80,110 +79,11 @@ export const meshStore = {
         }
     },
     
-    updateUI() {
-        const meshList = document.getElementById('meshList');
-        const meshCount = document.getElementById('meshCount');
-        
-        if (meshCount) {
-            meshCount.textContent = `${this.meshes.length} parts`;
-            meshCount.className = 'badge bg-primary';
-        }
-        
-        if (meshList) {
-            meshList.innerHTML = '';
-            this.meshes.forEach(mesh => {
-                const meshCard = this.createMeshCard(mesh);
-                meshList.appendChild(meshCard);
-            });
-        }
-    },
+    // Set by the parts table to re-render when state changes
+    onChange: null,
     
-    createMeshCard(mesh) {
-        const meshCard = document.createElement('div');
-        meshCard.className = 'card mesh-item';
-        meshCard.style.cursor = 'pointer';
-        
-        // Check if this mesh is selected using the global selectedMeshUuid
-        if (this.selectedMeshUuid === mesh.uuid) {
-            meshCard.style.backgroundColor = 'rgba(220, 53, 69, 0.1)';
-            meshCard.style.borderColor = '#dc3545';
-            meshCard.style.borderWidth = '2px';
-        }
-        
-        const cardBody = document.createElement('div');
-        cardBody.className = 'card-body p-2';
-        
-        const meshBtn = document.createElement('button');
-        meshBtn.className = 'btn btn-outline-primary btn-sm w-100 text-start mesh-info mb-2';
-        meshBtn.innerHTML = `
-            <div class="fw-bold">${escapeHtml(mesh.name)} • ${mesh.dimensions} • <span class="material-name">${escapeHtml(mesh.materialName)}</span></div>
-        `;
-        
-        // Explain merged/split parts
-        let partNote = null;
-        if (mesh.mergedCount > 1 || mesh.splitFromUuid) {
-            partNote = document.createElement('div');
-            partNote.className = 'part-note';
-            partNote.innerHTML = mesh.splitFromUuid
-                ? `<i class="bi bi-scissors"></i> Split from ${escapeHtml(mesh.name)} (one mesh per material)`
-                : `<i class="bi bi-layers"></i> Merged from ${mesh.mergedCount} meshes (one per material)`;
-        }
-        
-        const buttonGroup = document.createElement('div');
-        buttonGroup.className = 'btn-group w-100';
-        buttonGroup.setAttribute('role', 'group');
-        
-        const hideBtn = document.createElement('button');
-        hideBtn.className = mesh.isHidden ? 'btn btn-danger btn-sm' : 'btn btn-outline-danger btn-sm';
-        hideBtn.innerHTML = mesh.isHidden ? '<i class="bi bi-eye"></i> Show' : '<i class="bi bi-eye-slash"></i> Hide';
-        hideBtn.onclick = (e) => {
-            e.stopPropagation();
-            this.toggleVisibility(mesh.uuid);
-        };
-        
-        const keepBtn = document.createElement('button');
-        keepBtn.className = mesh.isKept ? 'btn btn-success btn-sm' : 'btn btn-outline-success btn-sm';
-        keepBtn.innerHTML = mesh.isKept ? '<i class="bi bi-check-circle-fill"></i> Kept' : '<i class="bi bi-check-circle"></i> Keep';
-        keepBtn.onclick = (e) => {
-            e.stopPropagation();
-            this.toggleKeep(mesh.uuid);
-        };
-        
-        // Card click selects the mesh
-        meshCard.onclick = () => {
-            this.selectMesh(mesh.uuid);
-        };
-        
-        // Add hover events for bounding box display
-        meshCard.onmouseenter = () => {
-            this.showBoundingBox(mesh.uuid);
-        };
-        
-        meshCard.onmouseleave = () => {
-            this.hideBoundingBox(mesh.uuid);
-        };
-        
-        buttonGroup.appendChild(hideBtn);
-        buttonGroup.appendChild(keepBtn);
-        
-        if (partNote) {
-            const splitBtn = document.createElement('button');
-            splitBtn.className = 'btn btn-outline-info btn-sm';
-            splitBtn.innerHTML = mesh.splitFromUuid ? '<i class="bi bi-union"></i> Merge' : '<i class="bi bi-scissors"></i> Split';
-            splitBtn.title = mesh.splitFromUuid ? 'Merge back into one part' : 'List each material as a separate part';
-            splitBtn.onclick = (e) => {
-                e.stopPropagation();
-                this.toggleSplit(mesh.uuid);
-            };
-            buttonGroup.appendChild(splitBtn);
-        }
-        
-        cardBody.appendChild(meshBtn);
-        if (partNote) cardBody.appendChild(partNote);
-        cardBody.appendChild(buttonGroup);
-        meshCard.appendChild(cardBody);
-        
-        return meshCard;
+    updateUI() {
+        if (this.onChange) this.onChange();
     },
     
     findMeshByUuid(uuid) {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { meshStore } from './js/ui-store.js';
+import { PartsTable } from './js/parts-table.js';
 import { SceneManager } from './js/scene.js';
 import { CameraManager } from './js/camera.js';
 import { MeshManager } from './js/mesh-manager.js';
@@ -36,6 +37,9 @@ function initializeViewer() {
     // Initialize camera and controls
     const cameraManager = new CameraManager(canvasWidth, canvasHeight, renderer);
 
+    // Parts list in the sidebar
+    new PartsTable(meshStore, document.getElementById('sidebar'));
+    
     // Initialize mesh manager
     const meshManager = new MeshManager();
 
@@ -78,6 +82,7 @@ function initializeViewer() {
             meshStore.selectedMeshUuid = null;
             meshStore.hoveredMeshUuid = null;
             meshStore.boundingBoxes.clear();
+            meshStore.updateUI();
         }
         
         // Process meshes
