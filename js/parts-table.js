@@ -10,7 +10,7 @@ const COLUMNS = [
     { key: 'width', label: 'W', numeric: true, sortValue: row => row.entries[0].size.width },
     { key: 'thickness', label: 'T', numeric: true, sortValue: row => row.entries[0].size.thickness },
     { key: 'material', label: 'Material', sortValue: row => row.entries[0].materialName },
-    { key: 'edges', label: 'Edges', numeric: true, sortValue: row => bandedEdges(row.entries[0]).length },
+    { key: 'edges', label: 'Edges', sortValue: row => bandedEdges(row.entries[0]).length },
     { key: 'grain', label: 'Grain', sortValue: row => row.entries[0].grain || '' }
 ];
 
@@ -169,7 +169,7 @@ export class PartsTable {
             rows.sort((a, b) => {
                 const va = column.sortValue(a);
                 const vb = column.sortValue(b);
-                const order = column.numeric ? va - vb : collator.compare(va, vb);
+                const order = typeof va === 'number' ? va - vb : collator.compare(va, vb);
                 return order * this.sortDir;
             });
         }
