@@ -41,7 +41,8 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 │   ├── 🎥 scene.js              # Scene setup, lighting, environment
 │   ├── 📹 camera.js             # Camera controls and framing
 │   ├── 📦 loader.js             # GLTF loader with Draco/meshopt support
-│   ├── 🔧 mesh-manager.js       # Part detection, sizes, edge banding and grain analysis
+│   ├── 🔧 mesh-manager.js       # Part detection, geometry cleanup, split/merge
+│   ├── 🔬 part-analysis.js      # Sizes, board material, edge banding, grain, assemblies
 │   ├── 🪵 grain.js              # Grain direction from texture images
 │   ├── 💾 parts-store.js        # Parts list state: parts, selection, hover, edits
 │   ├── 🔦 part-highlighter.js   # Shows selection, exclusion, isolation and hover in 3D
@@ -52,15 +53,18 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 │   ├── 📐 dimensions.js         # Dimension lines on the selected part
 │   ├── 🖱️ interaction.js        # Hover and click picking in 3D
 │   ├── 🛠️ toolbar.js            # Open, reset, explode and isolate buttons
+│   ├── 🎞️ animation.js          # Explode/implode animation helper
 │   ├── 🎪 popup-manager.js      # 3D-anchored popup system
 │   ├── 📁 file-upload-manager.js # File dialog and drag & drop
 │   ├── 📊 export-manager.js     # Excel and CSV export
+│   ├── 💬 toast.js              # Short confirmation messages
 │   ├── 🖨️ print.js              # Printable cut list (save as PDF)
 │   ├── 💽 storage.js            # Remembered edits and settings (browser storage)
 │   ├── 🗂️ sidebar.js            # Sidebar tabs and mobile bottom sheet
 │   └── 🛡️ html.js               # HTML escaping helper
 ├── 📁 css/
 │   ├── 📋 parts-panel.css       # Sidebar, table and summary styling
+│   ├── 🛠️ toolbar.css           # Toolbar buttons and messages
 │   ├── 🎨 popup.css             # Popup styling
 │   └── 📁 file-upload.css       # File upload dialog styling
 └── 📄 README.md                 # You are here! 👋
