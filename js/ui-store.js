@@ -82,14 +82,23 @@ export const meshStore = {
         };
     },
     
+    // Collaborators for splitting and merging parts
+    meshManager: null,
+    beforePartsChange: null,
+    
+    connect({ meshManager, beforePartsChange }) {
+        this.meshManager = meshManager;
+        this.beforePartsChange = beforePartsChange;
+    },
+    
     // Split a merged part into one entry per mesh, or merge split entries back
     toggleSplit(uuid) {
         const entry = this.findMeshByUuid(uuid);
-        const meshManager = window.meshManager;
+        const meshManager = this.meshManager;
         if (!entry || !meshManager) return;
         
         // The part list is about to change, so drop transient view state
-        if (window.toolbarManager) window.toolbarManager.collapse();
+        if (this.beforePartsChange) this.beforePartsChange();
         this.hideCurrentBoundingBox();
         this.deselectCurrentMesh();
         
@@ -138,9 +147,6 @@ export const meshStore = {
         this.uuidIndex = null;
         
         this.updateUI();
-        if (window.exportManager) {
-            window.exportManager.updateButtonState();
-        }
     },
     
     // Views re-render when state changes
@@ -361,11 +367,6 @@ export const meshStore = {
             this.refreshAppearance(mesh);
         });
         this.updateUI();
-        
-        // Notify export manager to update button state
-        if (window.exportManager) {
-            window.exportManager.updateButtonState();
-        }
     },
     
     rename(uuids, name) {

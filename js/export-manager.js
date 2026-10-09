@@ -34,6 +34,9 @@ export class ExportManager {
         
         toolbar.appendChild(this.dropdown);
         this.updateButtonState();
+        meshStore.subscribe(change => {
+            if (change !== 'selection') this.updateButtonState();
+        });
     }
     
     getIncludedParts() {

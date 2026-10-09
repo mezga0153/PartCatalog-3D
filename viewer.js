@@ -45,13 +45,17 @@ function initializeViewer() {
     // Initialize mesh manager
     const meshManager = new MeshManager();
 
-    // Initialize toolbar
-    const toolbarManager = new ToolbarManager(cameraManager, meshManager);
+    // Initialize toolbar (the upload dialog is created further down)
+    const toolbarManager = new ToolbarManager(cameraManager, meshManager, {
+        onOpenFile: () => fileUploadManager.show()
+    });
     
-    // Used by the UI store to split/merge parts
-    window.meshManager = meshManager;
-    window.toolbarManager = toolbarManager;
-    window.meshStore = meshStore; // handy for debugging in the console
+    // Splitting and merging parts needs the meshes, and an exploded view must
+    // snap back first because the list of parts changes
+    meshStore.connect({
+        meshManager,
+        beforePartsChange: () => toolbarManager.collapse()
+    });
 
     // Initialize interaction
     const interactionManager = new InteractionManager(renderer, cameraManager.camera, meshManager);
@@ -61,7 +65,7 @@ function initializeViewer() {
     meshStore.subscribe(() => dimensionOverlay.sync(meshStore));
     
     // Initialize export manager
-    window.exportManager = new ExportManager(() => summaryPanel.sheet);
+    new ExportManager(() => summaryPanel.sheet);
 
     // Function to process loaded model
     function processLoadedModel(gltf, filename) {
@@ -81,7 +85,6 @@ function initializeViewer() {
         
         sceneManager.setModel(model);
         toolbarManager.resetExplodeState();
-        window.exportManager.updateButtonState();
         
         // Update title to show loaded file
         document.title = `GLB Box Viewer - ${filename}`;
@@ -90,14 +93,19 @@ function initializeViewer() {
         cameraManager.fitToObject(model);
     }
 
-    // Make processLoadedModel available globally for the toolbar
-    window.processLoadedModel = processLoadedModel;
-
     // Initialize file upload manager
     const fileUploadManager = new FileUploadManager(processLoadedModel);
 
-    // Make file upload manager available globally for the toolbar
-    window.fileUploadManager = fileUploadManager;
+    // Handle for debugging in the console and for the browser tests; the app
+    // itself passes these around explicitly
+    window.partCatalog = {
+        store: meshStore,
+        meshManager,
+        cameraManager,
+        toolbar: toolbarManager,
+        fileUpload: fileUploadManager,
+        loadModel: processLoadedModel
+    };
 
     // The upload dialog opens on startup; its "View Demo" button loads demo.glb
 

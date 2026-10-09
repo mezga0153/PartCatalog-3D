@@ -56,27 +56,27 @@ test('grouping by material and assembly, with collapsible sections', async () =>
 test('excluded parts are ghosted and left out of the export count', async () => {
     await app.loadDemo();
     await app.ev(`${row('k1 - hrbet')}.querySelector('.include input').click()`);
-    assert.equal(await app.ev(`window.meshStore.meshes.find(m => m.name === 'k1 - hrbet').threeMeshes[0].material.opacity`), 0.15);
+    assert.equal(await app.ev(`window.partCatalog.store.meshes.find(m => m.name === 'k1 - hrbet').threeMeshes[0].material.opacity`), 0.15);
     assert.deepEqual(await app.ev(`(() => { const h = document.querySelector('th.include input'); return [h.checked, h.indeterminate]; })()`), [false, true]);
     assert.equal(await app.ev(`document.querySelector('#toolbar .dropdown [data-bs-toggle]').title`), 'Export cut list (4 parts)');
     
     await app.ev(`document.querySelector('th.include input').click()`);
-    assert.equal(await app.ev(`window.meshStore.meshes.every(m => m.isIncluded)`), true);
+    assert.equal(await app.ev(`window.partCatalog.store.meshes.every(m => m.isIncluded)`), true);
 });
 
 test('splitting and merging keeps hidden, included, name and quantity state', async () => {
     await app.ev(setCombine(false));
-    const leva = `window.meshStore.meshes.find(m => m.name === 'k2 - leva')`;
-    await app.ev(`window.meshStore.setIncluded([${leva}.uuid], false); window.meshStore.setQuantity(${leva}.uuid, 3)`);
+    const leva = `window.partCatalog.store.meshes.find(m => m.name === 'k2 - leva')`;
+    await app.ev(`window.partCatalog.store.setIncluded([${leva}.uuid], false); window.partCatalog.store.setQuantity(${leva}.uuid, 3)`);
     await app.ev(`${row('k2 - leva')}.querySelector('[title="List each material as a separate part"]').click()`);
     
-    const pieces = await app.ev(`window.meshStore.meshes.filter(m => m.name === 'k2 - leva').map(m => [m.materialName, m.isIncluded, m.quantity].join(' '))`);
+    const pieces = await app.ev(`window.partCatalog.store.meshes.filter(m => m.name === 'k2 - leva').map(m => [m.materialName, m.isIncluded, m.quantity].join(' '))`);
     assert.deepEqual(pieces, ['default material false 3', 'H3430 Egger false 3']);
     assert.match(await app.ev(`${row('k2 - leva')}.innerText`), /Split piece of k2 - leva/);
     
     await app.ev(`${row('k2 - leva')}.querySelector('[title="Merge back into one part"]').click()`);
-    assert.deepEqual(await app.ev(`window.meshStore.meshes.filter(m => m.name === 'k2 - leva').map(m => [m.mergedCount, m.isIncluded, m.quantity].join(' '))`), ['2 false 3']);
-    await app.ev(`window.meshStore.setIncluded([${leva}.uuid], true); window.meshStore.setQuantity(${leva}.uuid, 1)`);
+    assert.deepEqual(await app.ev(`window.partCatalog.store.meshes.filter(m => m.name === 'k2 - leva').map(m => [m.mergedCount, m.isIncluded, m.quantity].join(' '))`), ['2 false 3']);
+    await app.ev(`window.partCatalog.store.setIncluded([${leva}.uuid], true); window.partCatalog.store.setQuantity(${leva}.uuid, 1)`);
 });
 
 test('inline editing of names, quantities and notes', async () => {
@@ -107,7 +107,7 @@ test('edits and settings are remembered for the same model', async () => {
     
     // Another model starts clean
     await app.loadFile(path.join(EXAMPLES, 'banded-panels.glb'));
-    assert.equal(await app.ev(`window.meshStore.meshes.filter(m => m.quantity !== 1 || m.notes).length`), 0);
+    assert.equal(await app.ev(`window.partCatalog.store.meshes.filter(m => m.quantity !== 1 || m.notes).length`), 0);
     await app.ev('localStorage.clear()');
 });
 

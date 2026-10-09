@@ -119,10 +119,8 @@ export async function launch({ width = 1400, height = 900, mobile = false } = {}
     const open = async () => {
         await ev('window.__previousPage = true');
         await send('Page.navigate', { url });
-        await waitFor(`!window.__previousPage && !!window.fileUploadManager && !!document.querySelector('#toolbar .dropdown')`, 20000);
+        await waitFor(`!window.__previousPage && !!window.partCatalog?.fileUpload && !!document.querySelector('#toolbar .dropdown')`, 20000);
     };
-    await open();
-    
     const app = {
         send, ev, waitFor, errors, downloads,
         
@@ -130,7 +128,7 @@ export async function launch({ width = 1400, height = 900, mobile = false } = {}
         
         // Loading sets the title to the file name, so clear it first to wait for this load
         async loadDemo() {
-            await ev(`document.title = ''; window.fileUploadManager.loadDemo()`);
+            await ev(`document.title = ''; window.partCatalog.fileUpload.loadDemo()`);
             await waitFor(`document.title.includes('demo.glb')`);
         },
         
@@ -163,6 +161,13 @@ export async function launch({ width = 1400, height = 900, mobile = false } = {}
             fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
         }
     };
+    // Don't leave Chrome running if the page never becomes ready
+    try {
+        await open();
+    } catch (error) {
+        await app.close();
+        throw error;
+    }
     return app;
 }
 

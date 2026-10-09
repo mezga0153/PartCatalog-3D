@@ -7,11 +7,11 @@ let app;
 before(async () => { app = await launch(); });
 after(() => app.close());
 
-const PARTS = `window.meshStore.meshes.map(m => [m.name, m.size.length, m.size.width, m.size.thickness].map(v => typeof v === 'number' ? Math.round(v) : v).join(' '))`;
+const PARTS = `window.partCatalog.store.meshes.map(m => [m.name, m.size.length, m.size.width, m.size.thickness].map(v => typeof v === 'number' ? Math.round(v) : v).join(' '))`;
 
 test('demo parts get real sizes, names, board material, banding and grain', async () => {
     await app.loadDemo();
-    const parts = await app.ev(`window.meshStore.meshes.map(m => ({
+    const parts = await app.ev(`window.partCatalog.store.meshes.map(m => ({
         name: m.name,
         size: [m.size.length, m.size.width, m.size.thickness].map(Math.round).join(' x '),
         material: m.materialName,
@@ -37,33 +37,33 @@ test('compressed copies of the demo give the same sizes', async () => {
 
 test('edge banding is detected per edge', async () => {
     await app.loadFile(path.join(EXAMPLES, 'banded-panels.glb'));
-    const edges = await app.ev(`window.meshStore.meshes.map(m => m.name + ': ' + Object.entries(m.edges).filter(([, v]) => v).map(([k]) => k).join(' '))`);
+    const edges = await app.ev(`window.partCatalog.store.meshes.map(m => m.name + ': ' + Object.entries(m.edges).filter(([, v]) => v).map(([k]) => k).join(' '))`);
     assert.deepEqual(edges, [
         'Shelf - all edges: L1 L2 W1 W2',
         'Side - long edges: L1 L2',
         'Door - one short: W1',
         'Back - none: '
     ]);
-    assert.ok(await app.ev(`window.meshStore.meshes.every(m => m.materialName === 'Oak decor')`));
+    assert.ok(await app.ev(`window.partCatalog.store.meshes.every(m => m.materialName === 'Oak decor')`));
 });
 
 test('assemblies come from the node hierarchy or shared name prefixes', async () => {
     await app.loadFile(path.join(EXAMPLES, 'two-cabinets.glb'));
-    assert.deepEqual(await app.ev(`[...new Set(window.meshStore.meshes.map(m => m.assembly))]`), ['Cabinet A', 'Cabinet B']);
+    assert.deepEqual(await app.ev(`[...new Set(window.partCatalog.store.meshes.map(m => m.assembly))]`), ['Cabinet A', 'Cabinet B']);
     
     await app.loadDemo();
-    assert.deepEqual(await app.ev(`[...new Set(window.meshStore.meshes.map(m => m.assembly))]`), ['k2', 'k1']);
+    assert.deepEqual(await app.ev(`[...new Set(window.partCatalog.store.meshes.map(m => m.assembly))]`), ['k2', 'k1']);
     
     // Unique prefixes are not assemblies
     await app.loadFile(path.join(EXAMPLES, 'banded-panels.glb'));
-    assert.deepEqual(await app.ev(`[...new Set(window.meshStore.meshes.map(m => m.assembly))]`), [null]);
+    assert.deepEqual(await app.ev(`[...new Set(window.partCatalog.store.meshes.map(m => m.assembly))]`), [null]);
 });
 
 test('choosing the same file again reloads it', async () => {
     const file = path.join(EXAMPLES, 'banded-panels.glb');
     await app.loadFile(file);
     await app.loadFile(file);
-    assert.equal(await app.ev(`window.meshStore.meshes.length`), 4);
+    assert.equal(await app.ev(`window.partCatalog.store.meshes.length`), 4);
 });
 
 test('names from the model are shown as text, not HTML', async () => {

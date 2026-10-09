@@ -3,9 +3,10 @@ import { meshStore } from './ui-store.js';
 import { animateVector, Easing } from './animation.js';
 
 export class ToolbarManager {
-    constructor(cameraManager, meshManager) {
+    constructor(cameraManager, meshManager, { onOpenFile }) {
         this.cameraManager = cameraManager;
         this.meshManager = meshManager;
+        this.onOpenFile = onOpenFile;
         this.isExploded = false;
         this.isAnimating = false;
         this.originalPositions = new Map();
@@ -18,7 +19,7 @@ export class ToolbarManager {
         this.toolbar = document.createElement('div');
         this.toolbar.id = 'toolbar';
         
-        this.openFileBtn = this.createButton('bi-folder2-open', 'Open GLB File', () => window.fileUploadManager.show());
+        this.openFileBtn = this.createButton('bi-folder2-open', 'Open GLB File', () => this.onOpenFile());
         this.resetCameraBtn = this.createButton('bi-house', 'Reset Camera', () => this.cameraManager.reset());
         this.explodeBtn = this.createButton('bi-arrows-expand', 'Explode Model', () => this.toggleExplode());
         this.isolateBtn = this.createButton('bi-bullseye', 'Isolate selection (fade other parts)', () => this.toggleIsolate());
