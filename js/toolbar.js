@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import { partsStore } from './parts-store.js';
 import { animateVector, Easing } from './animation.js';
 
+// Start parts one after another, but spread the starts over at most a second so
+// large models don't take ages (1,020 parts at 50 ms each would be 51 s)
+const MAX_STAGGER = 1000;
+
+function staggerDelay(index, count, step) {
+    return index * Math.min(step, MAX_STAGGER / Math.max(1, count - 1));
+}
+
 export class ToolbarManager {
     constructor(cameraManager, meshManager, { onOpenFile }) {
         this.cameraManager = cameraManager;
@@ -108,7 +116,7 @@ export class ToolbarManager {
             
             const tween = animateVector(mesh.position, targetPos, {
                 duration: 800,
-                delay: index * 50,
+                delay: staggerDelay(index, totalTweens, 50),
                 easing: Easing.cubicOut,
                 onComplete: () => {
                     completedTweens++;
@@ -133,7 +141,7 @@ export class ToolbarManager {
                 
                 const tween = animateVector(mesh.position, originalPos.clone(), {
                     duration: 600,
-                    delay: index * 30,
+                    delay: staggerDelay(index, totalTweens, 30),
                     easing: Easing.cubicInOut,
                     onComplete: () => {
                         completedTweens++;

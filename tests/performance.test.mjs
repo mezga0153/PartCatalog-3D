@@ -8,7 +8,7 @@ before(async () => { app = await launch(); });
 after(() => app.close());
 
 // Generous limits: these catch accidental O(n²) work, not small regressions
-test('a 1,020-part model loads and selects quickly', async () => {
+test('a 1,020-part model loads, selects and explodes quickly', async () => {
     await app.ev(`localStorage.setItem('partcatalog:table', JSON.stringify({ combineIdentical: false }))`);
     await app.reload();
     
@@ -20,5 +20,12 @@ test('a 1,020-part model loads and selects quickly', async () => {
     
     const selectTime = await app.ev(`(() => { const t = performance.now(); document.querySelectorAll('#partsPane .parts-table tbody tr')[500].click(); return performance.now() - t; })()`);
     assert.ok(selectTime < 100, `selection took ${selectTime} ms`);
+    
+    // Explode staggers the parts, but over at most a second plus the animation
+    const explodeStart = Date.now();
+    await app.ev(`document.querySelector('[title="Explode Model"]').click()`);
+    await app.waitFor('window.partCatalog.toolbar.isExploded && !window.partCatalog.toolbar.isAnimating', 30000);
+    const explodeTime = Date.now() - explodeStart;
+    assert.ok(explodeTime < 10000, `explode took ${explodeTime} ms`);
     assert.deepEqual(app.errors, []);
 });
