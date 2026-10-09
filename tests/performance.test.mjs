@@ -15,7 +15,7 @@ test('a 1,020-part model loads and selects quickly', async () => {
     const start = Date.now();
     await app.loadFile(path.join(EXAMPLES, '170-cabinets.glb'));
     const loadTime = Date.now() - start;
-    assert.equal(await app.ev(`window.partCatalog.store.meshes.length`), 1020);
+    assert.equal(await app.ev(`window.partCatalog.store.parts.length`), 1020);
     assert.ok(loadTime < 5000, `load took ${loadTime} ms`);
     
     const selectTime = await app.ev(`(() => { const t = performance.now(); document.querySelectorAll('#partsPane .parts-table tbody tr')[500].click(); return performance.now() - t; })()`);

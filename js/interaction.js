@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { meshStore } from './ui-store.js';
+import { partsStore } from './parts-store.js';
 import { PopupManager } from './popup-manager.js';
 
 export class InteractionManager {
@@ -17,8 +17,8 @@ export class InteractionManager {
         this.popupManager = new PopupManager(renderer, camera);
         
         // Keep the popup in step with the list (units, names, quantities)
-        meshStore.subscribe(change => {
-            if (change !== 'selection') this.popupManager.refresh(uuid => meshStore.findMeshByUuid(uuid));
+        partsStore.subscribe(change => {
+            if (change === 'all') this.popupManager.refresh(uuid => partsStore.findPart(uuid));
         });
         
         this.setupEventListeners();
@@ -53,7 +53,7 @@ export class InteractionManager {
         });
         
         this.renderer.domElement.addEventListener('mouseleave', () => {
-            meshStore.setSceneHover(null);
+            partsStore.setSceneHover(null);
             this.renderer.domElement.style.cursor = '';
         });
         
@@ -89,7 +89,7 @@ export class InteractionManager {
     
     updateHover(event) {
         const part = this.pickPart(event);
-        meshStore.setSceneHover(part ? part.object.uuid : null);
+        partsStore.setSceneHover(part ? part.object.uuid : null);
         this.renderer.domElement.style.cursor = part ? 'pointer' : '';
     }
     
@@ -119,20 +119,20 @@ export class InteractionManager {
             console.log('Clicked mesh:', clickedMesh);
             const part = this.meshManager.getPartForMesh(clickedMesh);
             
-            if (meshStore && part) {
+            if (part) {
                 // Use the unified selection method
-                meshStore.select([part.object.uuid], { reveal: true });
+                partsStore.select([part.object.uuid], { reveal: true });
                 
                 // Show popup with part information
-                const meshData = meshStore.findMeshByUuid(part.object.uuid);
+                const meshData = partsStore.findPart(part.object.uuid);
                 if (meshData) {
                     this.popupManager.showPopup(part, meshData);
                 }
             }
         } else {
             // Clicked on empty space, deselect current mesh and hide popup
-            if (meshStore && meshStore.selectedUuids.size > 0) {
-                meshStore.deselectCurrentMesh();
+            if (partsStore.selectedUuids.size > 0) {
+                partsStore.clearSelection();
             }
             this.popupManager.hidePopup();
         }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { meshStore } from './ui-store.js';
+import { partsStore } from './parts-store.js';
 import { animateVector, Easing } from './animation.js';
 
 export class ToolbarManager {
@@ -25,7 +25,7 @@ export class ToolbarManager {
         this.isolateBtn = this.createButton('bi-bullseye', 'Isolate selection (fade other parts)', () => this.toggleIsolate());
         
         // Keep the isolate button state in sync, e.g. after loading another model
-        meshStore.subscribe(() => this.isolateBtn.classList.toggle('active', meshStore.isolate));
+        partsStore.subscribe(() => this.isolateBtn.classList.toggle('active', partsStore.isolate));
         
         document.body.appendChild(this.toolbar);
     }
@@ -42,13 +42,13 @@ export class ToolbarManager {
     }
     
     toggleIsolate() {
-        meshStore.setIsolate(!meshStore.isolate);
+        partsStore.setIsolate(!partsStore.isolate);
         
         // Zoom to the isolated parts
-        if (meshStore.isolate && meshStore.selectedUuids.size > 0) {
+        if (partsStore.isolate && partsStore.selectedUuids.size > 0) {
             const box = new THREE.Box3();
-            meshStore.selectedUuids.forEach(uuid => {
-                const entry = meshStore.findMeshByUuid(uuid);
+            partsStore.selectedUuids.forEach(uuid => {
+                const entry = partsStore.findPart(uuid);
                 if (entry) entry.threeMeshes.forEach(mesh => box.expandByObject(mesh));
             });
             this.cameraManager.frameBox(box);

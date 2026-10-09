@@ -1,4 +1,4 @@
-import { meshStore } from './ui-store.js';
+import { partsStore } from './parts-store.js';
 import { cutListRows, summarize, totalQuantity } from './cut-list.js';
 import { showToast } from './toast.js';
 import { toUnit, unitLabel, areaInUnit, areaLabel, runInUnit, runLabel } from './units.js';
@@ -34,13 +34,13 @@ export class ExportManager {
         
         toolbar.appendChild(this.dropdown);
         this.updateButtonState();
-        meshStore.subscribe(change => {
-            if (change !== 'selection') this.updateButtonState();
+        partsStore.subscribe(change => {
+            if (change === 'all') this.updateButtonState();
         });
     }
     
     getIncludedParts() {
-        return meshStore.meshes.filter(mesh => mesh.isIncluded);
+        return partsStore.parts.filter(part => part.isIncluded);
     }
     
     updateButtonState() {

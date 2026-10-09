@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { meshStore } from './js/ui-store.js';
+import { partsStore } from './js/parts-store.js';
+import { PartHighlighter } from './js/part-highlighter.js';
 import { PartsTable } from './js/parts-table.js';
 import { SummaryPanel } from './js/summary-panel.js';
 import { setupSidebarTabs } from './js/sidebar.js';
@@ -39,8 +40,11 @@ function initializeViewer() {
     // Parts list and totals in the sidebar
     const sidebar = document.getElementById('sidebar');
     setupSidebarTabs(sidebar);
-    new PartsTable(meshStore, document.getElementById('partsPane'), sidebar.querySelector('.parts-count'));
-    const summaryPanel = new SummaryPanel(meshStore, document.getElementById('summaryPane'));
+    new PartsTable(partsStore, document.getElementById('partsPane'), sidebar.querySelector('.parts-count'));
+    const summaryPanel = new SummaryPanel(partsStore, document.getElementById('summaryPane'));
+    
+    // Show selection, exclusion, isolation and hover in 3D
+    const highlighter = new PartHighlighter(partsStore, sceneManager.scene);
     
     // Initialize mesh manager
     const meshManager = new MeshManager();
@@ -52,7 +56,7 @@ function initializeViewer() {
     
     // Splitting and merging parts needs the meshes, and an exploded view must
     // snap back first because the list of parts changes
-    meshStore.connect({
+    partsStore.connect({
         meshManager,
         beforePartsChange: () => toolbarManager.collapse()
     });
@@ -62,7 +66,7 @@ function initializeViewer() {
 
     // Dimension lines on the selected part
     const dimensionOverlay = new DimensionOverlay(sceneManager.scene, cameraManager.camera, document.body);
-    meshStore.subscribe(() => dimensionOverlay.sync(meshStore));
+    partsStore.subscribe(() => dimensionOverlay.sync(partsStore));
     
     // Initialize export manager
     new ExportManager(() => summaryPanel.sheet);
@@ -72,16 +76,16 @@ function initializeViewer() {
         const model = gltf.scene;
         
         // Clear the previous model's parts and view state
-        meshStore.reset();
+        partsStore.reset();
         
         // Process meshes (this also resets the mesh manager)
         meshManager.processModel(model, gltf.parser && gltf.parser.associations);
         model.updateMatrixWorld(true);
         
         // Process each part for UI
-        meshStore.addMeshes(meshManager.getParts().map(part => meshManager.describePart(part)).filter(Boolean));
+        partsStore.addParts(meshManager.getParts().map(part => meshManager.describePart(part)).filter(Boolean));
         
-        meshStore.restoreEdits(filename);
+        partsStore.restoreEdits(filename);
         
         sceneManager.setModel(model);
         toolbarManager.resetExplodeState();
@@ -99,7 +103,8 @@ function initializeViewer() {
     // Handle for debugging in the console and for the browser tests; the app
     // itself passes these around explicitly
     window.partCatalog = {
-        store: meshStore,
+        store: partsStore,
+        highlighter,
         meshManager,
         cameraManager,
         toolbar: toolbarManager,

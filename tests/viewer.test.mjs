@@ -42,15 +42,15 @@ test('hovering in 3D highlights the row; clicking reveals it in a collapsed sect
     
     // Screen position of a part's centre
     const [x, y] = await app.ev(`(() => {
-        const entry = window.partCatalog.store.meshes.find(m => m.name === 'B-k1 - gor');
+        const entry = window.partCatalog.store.parts.find(m => m.name === 'B-k1 - gor');
         const box = new entry.threeMeshes[0].geometry.boundingBox.constructor();
         entry.threeMeshes.forEach(mesh => box.expandByObject(mesh));
         const c = box.getCenter(entry.threeMeshes[0].position.clone()).project(window.partCatalog.cameraManager.camera);
         return [Math.round((c.x + 1) / 2 * innerWidth), Math.round((1 - c.y) / 2 * innerHeight)];
     })()`);
     await app.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
-    await app.waitFor(`window.partCatalog.store.findMeshByUuid(window.partCatalog.store.sceneHoverUuid)?.name === 'B-k1 - gor'`);
-    assert.equal(await app.ev(`window.partCatalog.store.boundingBoxes.length`), 1);
+    await app.waitFor(`window.partCatalog.store.findPart(window.partCatalog.store.sceneHoverUuid)?.name === 'B-k1 - gor'`);
+    assert.equal(await app.ev(`window.partCatalog.highlighter.boxes.length`), 1);
     
     await app.click(x, y);
     await app.waitFor(`document.querySelector('#partsPane tr.selected') !== null`);
@@ -61,18 +61,18 @@ test('hovering in 3D highlights the row; clicking reveals it in a collapsed sect
 test('isolate fades everything but the selection', async () => {
     const app = apps[1];
     await app.ev(`window.partCatalog.toolbar.isolateBtn.click()`);
-    const opacities = await app.ev(`window.partCatalog.store.meshes.map(m => m.name + ' ' + m.threeMeshes[0].material.opacity)`);
+    const opacities = await app.ev(`window.partCatalog.store.parts.map(m => m.name + ' ' + m.threeMeshes[0].material.opacity)`);
     assert.ok(opacities.includes('B-k1 - gor 1'));
     assert.equal(opacities.filter(o => o.endsWith(' 0.06')).length, 9);
     await app.ev(`window.partCatalog.toolbar.isolateBtn.click()`);
-    assert.equal(await app.ev(`window.partCatalog.store.meshes.filter(m => m.threeMeshes[0].material.opacity === 0.06).length`), 0);
+    assert.equal(await app.ev(`window.partCatalog.store.parts.filter(m => m.threeMeshes[0].material.opacity === 0.06).length`), 0);
 });
 
 test('explode moves parts apart and the button recovers after loading another model', async () => {
     const app = apps[0];
     await app.ev(`document.querySelector('[title="Explode Model"]').click()`);
     await app.waitFor(`window.partCatalog.toolbar.isExploded && !window.partCatalog.toolbar.isAnimating`);
-    assert.ok(await app.ev(`window.partCatalog.store.meshes.some(m => m.threeObject.position.length() > 0.1)`));
+    assert.ok(await app.ev(`window.partCatalog.store.parts.some(m => m.threeObject.position.length() > 0.1)`));
     
     await app.loadDemo();
     assert.equal(await app.ev(`document.querySelector('[title="Explode Model"]').disabled`), false);
@@ -87,7 +87,7 @@ test('a GLB dropped anywhere on the page is loaded', async () => {
     assert.ok(await app.ev(`document.body.classList.contains('file-drag-active')`));
     await drop('drop');
     await app.waitFor(`document.title.includes('dropped.glb')`);
-    assert.equal(await app.ev(`window.partCatalog.store.meshes.length`), 4);
+    assert.equal(await app.ev(`window.partCatalog.store.parts.length`), 4);
     assert.equal(await app.ev(`document.body.classList.contains('file-drag-active')`), false);
     assert.deepEqual(app.errors, []);
 });

@@ -43,7 +43,8 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 │   ├── 📦 loader.js             # GLTF loader with Draco/meshopt support
 │   ├── 🔧 mesh-manager.js       # Part detection, sizes, edge banding and grain analysis
 │   ├── 🪵 grain.js              # Grain direction from texture images
-│   ├── 💾 ui-store.js           # Parts list state, selection and 3D appearance
+│   ├── 💾 parts-store.js        # Parts list state: parts, selection, hover, edits
+│   ├── 🔦 part-highlighter.js   # Shows selection, exclusion, isolation and hover in 3D
 │   ├── 📋 parts-table.js        # Sortable, groupable parts table with inline editing
 │   ├── 🧮 summary-panel.js      # Board, sheet and banding totals
 │   ├── ✂️ cut-list.js           # Identical-part grouping, cut-list rows and totals

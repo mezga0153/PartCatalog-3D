@@ -57,11 +57,12 @@ export class PartsTable {
         store.subscribe(change => {
             if (change === 'selection') {
                 this.renderSelection();
+            } else if (change === 'hover') {
+                this.highlightHovered(store.sceneHoverUuid);
             } else {
                 this.render();
             }
         });
-        store.hoverListeners.push(uuid => this.highlightHovered(uuid));
         this.render();
     }
     
@@ -127,7 +128,7 @@ export class PartsTable {
         // Every view shows lengths, so re-render them all
         this.container.querySelector('.units').addEventListener('change', (event) => {
             setUnit(event.target.value);
-            this.store.updateUI();
+            this.store.notify();
         });
         this.container.querySelector('.combine-identical').checked = this.combineIdentical;
         
@@ -165,7 +166,7 @@ export class PartsTable {
     
     // Sections of rows; a single unnamed section when not grouping
     getSections() {
-        let entries = this.store.meshes.slice();
+        let entries = this.store.parts.slice();
         
         if (this.search) {
             entries = entries.filter(m => `${m.name} ${m.allMaterials} ${m.assembly || ''}`.toLowerCase().includes(this.search));
@@ -226,7 +227,7 @@ export class PartsTable {
     
     // Update only the selected rows; re-render if a selected part's section is collapsed
     renderSelection() {
-        const revealEntry = this.store.revealUuid && this.store.findMeshByUuid(this.store.revealUuid);
+        const revealEntry = this.store.revealUuid && this.store.findPart(this.store.revealUuid);
         const grouping = GROUPINGS[this.groupBy];
         if (revealEntry && grouping && this.collapsedSections.has(`${this.groupBy}:${grouping.key(revealEntry)}`)) {
             this.render();
@@ -254,14 +255,14 @@ export class PartsTable {
         // Open the section holding a part selected in the 3D view
         const revealUuid = this.store.revealUuid;
         const grouping = GROUPINGS[this.groupBy];
-        const revealEntry = revealUuid && this.store.findMeshByUuid(revealUuid);
+        const revealEntry = revealUuid && this.store.findPart(revealUuid);
         if (revealEntry && grouping) {
             this.collapsedSections.delete(`${this.groupBy}:${grouping.key(revealEntry)}`);
         }
         
         const sections = this.getSections();
         const shownEntries = sections.flatMap(section => section.entries);
-        const total = this.store.meshes.length;
+        const total = this.store.parts.length;
         
         this.countEl.textContent = shownEntries.length === total ? `${total}` : `${shownEntries.length} / ${total}`;
         this.container.querySelector('.parts-table').classList.toggle('combined', this.combineIdentical);
@@ -411,8 +412,8 @@ export class PartsTable {
         }
         
         tr.onclick = () => this.store.select(uuids);
-        tr.onmouseenter = () => this.store.showBoundingBoxes(uuids);
-        tr.onmouseleave = () => this.store.hideBoundingBoxes(uuids);
+        tr.onmouseenter = () => this.store.setHover(uuids);
+        tr.onmouseleave = () => this.store.clearHover(uuids);
         
         return tr;
     }

@@ -12,7 +12,7 @@ export class SummaryPanel {
         
         this.build();
         store.subscribe(change => {
-            if (change !== 'selection') this.render();
+            if (change === 'all') this.render();
         });
         this.render();
     }
@@ -53,9 +53,9 @@ export class SummaryPanel {
     
     render() {
         this.renderSettings();
-        const included = this.store.meshes.filter(m => m.isIncluded);
+        const included = this.store.parts.filter(m => m.isIncluded);
         if (included.length === 0) {
-            this.body.innerHTML = `<div class="parts-empty">${this.store.meshes.length ? 'No parts are included in the cut list.' : 'Load a model to see totals.'}</div>`;
+            this.body.innerHTML = `<div class="parts-empty">${this.store.parts.length ? 'No parts are included in the cut list.' : 'Load a model to see totals.'}</div>`;
             return;
         }
         

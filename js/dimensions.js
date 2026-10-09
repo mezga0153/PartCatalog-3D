@@ -25,7 +25,7 @@ export class DimensionOverlay {
     // Show dimensions for the first selected part
     sync(store) {
         const uuid = store.selectedUuids.values().next().value;
-        const entry = uuid ? store.findMeshByUuid(uuid) : null;
+        const entry = uuid ? store.findPart(uuid) : null;
         const visibleEntry = entry && !entry.isHidden && entry.box ? entry : null;
         
         if (visibleEntry === this.entry && this.label === this.labelKey(visibleEntry)) return;
