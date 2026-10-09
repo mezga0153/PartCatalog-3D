@@ -93,7 +93,7 @@ export class InteractionManager {
             }
         } else {
             // Clicked on empty space, deselect current mesh and hide popup
-            if (meshStore && meshStore.selectedMeshUuid) {
+            if (meshStore && meshStore.selectedUuids.size > 0) {
                 meshStore.deselectCurrentMesh();
             }
             this.popupManager.hidePopup();

@@ -79,9 +79,8 @@ function initializeViewer() {
         // Clear UI store
         if (meshStore) {
             meshStore.meshes = [];
-            meshStore.selectedMeshUuid = null;
-            meshStore.hoveredMeshUuid = null;
-            meshStore.boundingBoxes.clear();
+            meshStore.selectedUuids.clear();
+            meshStore.hideBoundingBoxes();
             meshStore.updateUI();
         }
         

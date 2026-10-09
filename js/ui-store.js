@@ -12,12 +12,16 @@ const excludedMaterial = new THREE.MeshStandardMaterial({
     depthWrite: false
 });
 
+function sameUuids(a, b) {
+    return a.length === b.length && a.every((uuid, i) => uuid === b[i]);
+}
+
 // UI state for the parts list (plain object; keep three.js objects out of reactive proxies)
 export const meshStore = {
     meshes: [],
-    selectedMeshUuid: null, // Track currently selected mesh
-    hoveredMeshUuid: null, // Track currently hovered mesh
-    boundingBoxes: new Map(), // Store bounding box wireframes
+    selectedUuids: new Set(), // Currently selected parts
+    hoveredUuids: [], // Parts whose bounding boxes are shown
+    boundingBoxes: [], // Bounding box wireframes in the scene
     
     addMesh(meshData) {
         this.meshes.push(this.createEntry(meshData));
@@ -54,7 +58,7 @@ export const meshStore = {
         // The part list is about to change, so drop transient view state
         if (window.toolbarManager) window.toolbarManager.collapse();
         this.hideCurrentBoundingBox();
-        if (this.selectedMeshUuid) this.deselectCurrentMesh();
+        this.deselectCurrentMesh();
         
         if (entry.splitFromUuid) {
             const siblings = this.meshes.filter(m => m.splitFromUuid === entry.splitFromUuid);
@@ -132,100 +136,108 @@ export const meshStore = {
     },
     
     showBoundingBox(uuid) {
-        if (this.hoveredMeshUuid === uuid) return; // Already showing
-        
-        // Hide any existing bounding box
-        this.hideCurrentBoundingBox();
-        
-        const mesh = this.findMeshByUuid(uuid);
-        if (!mesh || mesh.isHidden) return;
-        
-        this.hoveredMeshUuid = uuid;
-        
-        // Create and add bounding box
-        const boundingBox = this.createBoundingBox(mesh);
-        this.boundingBoxes.set(uuid, boundingBox);
-        
-        // Add to scene (get scene from the mesh's parent)
-        let scene = mesh.threeObject.parent;
-        while (scene && !scene.isScene) {
-            scene = scene.parent;
-        }
-        if (scene) {
-            scene.add(boundingBox);
-        }
+        this.showBoundingBoxes([uuid]);
     },
     
     hideBoundingBox(uuid) {
-        if (this.hoveredMeshUuid !== uuid) return; // Not currently hovered
-        
-        this.hideCurrentBoundingBox();
+        this.hideBoundingBoxes([uuid]);
     },
     
     hideCurrentBoundingBox() {
-        if (!this.hoveredMeshUuid) return;
-        
-        const boundingBox = this.boundingBoxes.get(this.hoveredMeshUuid);
-        if (boundingBox && boundingBox.parent) {
-            boundingBox.parent.remove(boundingBox);
-        }
-        
-        this.boundingBoxes.delete(this.hoveredMeshUuid);
-        this.hoveredMeshUuid = null;
+        this.hideBoundingBoxes();
     },
     
-    // Unified selection method
+    showBoundingBoxes(uuids) {
+        if (sameUuids(this.hoveredUuids, uuids)) return; // Already showing
+        
+        // Hide any existing bounding boxes
+        this.hideBoundingBoxes();
+        this.hoveredUuids = uuids.slice();
+        
+        uuids.forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (!mesh || mesh.isHidden) return;
+            
+            // Add to scene (get scene from the mesh's parent)
+            let scene = mesh.threeObject.parent;
+            while (scene && !scene.isScene) {
+                scene = scene.parent;
+            }
+            if (scene) {
+                const boundingBox = this.createBoundingBox(mesh);
+                scene.add(boundingBox);
+                this.boundingBoxes.push(boundingBox);
+            }
+        });
+    },
+    
+    // Hide the shown bounding boxes; with uuids, only if those are the ones shown
+    hideBoundingBoxes(uuids) {
+        if (uuids && !sameUuids(this.hoveredUuids, uuids)) return;
+        
+        this.boundingBoxes.forEach(boundingBox => {
+            if (boundingBox.parent) boundingBox.parent.remove(boundingBox);
+        });
+        this.boundingBoxes = [];
+        this.hoveredUuids = [];
+    },
+    
+    isSelected(uuid) {
+        return this.selectedUuids.has(uuid);
+    },
+    
+    // Select one part
     selectMesh(uuid) {
-        console.log('Selecting mesh:', uuid);
+        this.select([uuid]);
+    },
+    
+    // Select a set of parts; selecting the current selection again clears it
+    select(uuids) {
+        const isSameSelection = uuids.length === this.selectedUuids.size && uuids.every(uuid => this.selectedUuids.has(uuid));
+        const previous = [...this.selectedUuids];
         
-        // If this mesh is already selected, deselect it
-        if (this.selectedMeshUuid === uuid) {
-            this.deselectCurrentMesh();
-            return;
-        }
+        this.selectedUuids = isSameSelection ? new Set() : new Set(uuids.filter(uuid => this.findMeshByUuid(uuid)));
         
-        // Deselect previously selected mesh
-        if (this.selectedMeshUuid) {
-            this.deselectCurrentMesh();
-        }
-        
-        // Select new mesh
-        const mesh = this.findMeshByUuid(uuid);
-        if (!mesh) return;
-        
-        this.selectedMeshUuid = uuid;
-        this.refreshAppearance(mesh);
+        new Set([...previous, ...uuids]).forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (mesh) this.refreshAppearance(mesh);
+        });
         
         this.updateUI();
     },
     
     deselectCurrentMesh() {
-        if (!this.selectedMeshUuid) return;
+        if (this.selectedUuids.size === 0) return;
         
-        const mesh = this.findMeshByUuid(this.selectedMeshUuid);
-        this.selectedMeshUuid = null;
-        if (mesh) this.refreshAppearance(mesh);
-
+        const previous = [...this.selectedUuids];
+        this.selectedUuids = new Set();
+        previous.forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (mesh) this.refreshAppearance(mesh);
+        });
+        
         this.updateUI();
-    },
-    
-    // Keep for compatibility but redirect to unified method
-    toggleMeshSelection(uuid) {
-        this.selectMesh(uuid);
     },
     
     toggleVisibility(uuid) {
         const mesh = this.findMeshByUuid(uuid);
-        if (!mesh) return;
-        
-        mesh.isHidden = !mesh.isHidden;
-        mesh.threeMeshes.forEach(threeMesh => {
-            threeMesh.visible = !mesh.isHidden;
+        if (mesh) this.setHidden([uuid], !mesh.isHidden);
+    },
+    
+    setHidden(uuids, isHidden) {
+        uuids.forEach(uuid => {
+            const mesh = this.findMeshByUuid(uuid);
+            if (!mesh) return;
+            
+            mesh.isHidden = isHidden;
+            mesh.threeMeshes.forEach(threeMesh => {
+                threeMesh.visible = !isHidden;
+            });
         });
         
-        // Hide bounding box if this mesh is currently hovered
-        if (mesh.isHidden && this.hoveredMeshUuid === uuid) {
-            this.hideCurrentBoundingBox();
+        // Hide bounding boxes of parts that were just hidden
+        if (isHidden && this.hoveredUuids.some(uuid => uuids.includes(uuid))) {
+            this.hideBoundingBoxes();
         }
         this.updateUI();
     },
@@ -259,7 +271,7 @@ export const meshStore = {
                 threeMesh.userData.originalMaterial = threeMesh.material;
             }
             
-            if (this.selectedMeshUuid === mesh.uuid) {
+            if (this.selectedUuids.has(mesh.uuid)) {
                 threeMesh.material = selectedMaterial;
             } else if (!mesh.isIncluded) {
                 threeMesh.material = excludedMaterial;

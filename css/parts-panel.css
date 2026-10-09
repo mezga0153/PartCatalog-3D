@@ -52,6 +52,32 @@
     box-shadow: none;
 }
 
+.parts-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+}
+
+.parts-option .form-check-input {
+    margin-top: 0;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.parts-option .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.parts-table td.qty {
+    font-weight: 700;
+    color: #ffd166;
+}
+
 .parts-scroll {
     flex: 1;
     min-height: 0;
