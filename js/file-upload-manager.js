@@ -1,4 +1,15 @@
 import { createGLTFLoader } from './loader.js';
+import { escapeHtml } from './html.js';
+
+// Models that can be loaded from the dialog without a file of your own
+const DEMO = { file: 'demo.glb' };
+const EXAMPLES = [
+    { file: 'examples/banded-panels.glb', icon: 'bi-border-outer', title: 'Banded panels', description: 'Four panels with different edge banding' },
+    { file: 'examples/two-cabinets.glb', icon: 'bi-collection', title: 'Two cabinets', description: 'Grouping by assembly and repeated parts' },
+    { file: 'examples/170-cabinets.glb', icon: 'bi-grid-3x3', title: '170 cabinets', description: 'A large model with 1,020 parts' },
+    { file: 'examples/demo-draco.glb', icon: 'bi-file-zip', title: 'Draco compressed', description: 'The demo cabinet with Draco compression' },
+    { file: 'examples/demo-meshopt.glb', icon: 'bi-file-zip', title: 'Meshopt compressed', description: 'The demo cabinet with meshopt compression' }
+];
 
 export class FileUploadManager {
     constructor(onFileLoaded) {
@@ -51,6 +62,21 @@ export class FileUploadManager {
                 </button>
             </div>
             
+            <div class="file-examples">
+                <div class="file-examples-title">Or try an example</div>
+                <div class="file-examples-list">
+                    ${EXAMPLES.map((example, i) => `
+                        <button type="button" class="file-example-btn" data-example="${i}">
+                            <i class="bi ${example.icon}"></i>
+                            <span>
+                                <span class="file-example-title">${escapeHtml(example.title)}</span>
+                                <span class="file-example-description">${escapeHtml(example.description)}</span>
+                            </span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            
             <div class="file-upload-progress" id="uploadProgress">
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill"></div>
@@ -88,9 +114,12 @@ export class FileUploadManager {
             this.fileInput.click();
         });
         
-        // Demo button
+        // Demo and example buttons
         this.demoBtn.addEventListener('click', () => {
             this.loadDemo();
+        });
+        this.dialog.querySelectorAll('[data-example]').forEach(button => {
+            button.addEventListener('click', () => this.loadExample(EXAMPLES[button.dataset.example]));
         });
         
         // Drop zone click
@@ -164,17 +193,22 @@ export class FileUploadManager {
     }
     
     loadDemo() {
+        this.loadExample(DEMO);
+    }
+    
+    // Load a model that ships with the app (the demo or one of the examples)
+    loadExample(example) {
         const loader = createGLTFLoader();
-        const demoUrl = './demo.glb'; // Load from project root
+        const name = example.file.split('/').pop();
         
         this.showProgress();
         this.hideError();
         
         loader.load(
-            demoUrl,
+            `./${example.file}`,
             (gltf) => {
                 this.hideProgress();
-                this.onFileLoaded(gltf, 'demo.glb');
+                this.onFileLoaded(gltf, name);
                 this.close();
             },
             (progress) => {
@@ -185,8 +219,8 @@ export class FileUploadManager {
             },
             (error) => {
                 this.hideProgress();
-                this.showError('Failed to load demo model. Please check that demo.glb exists in the project root.');
-                console.error('Demo load error:', error);
+                this.showError(`Failed to load ${name}.`);
+                console.error('Example load error:', error);
             }
         );
     }

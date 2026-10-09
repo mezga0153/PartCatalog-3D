@@ -74,6 +74,20 @@ test('names from the model are shown as text, not HTML', async () => {
     assert.equal(await app.ev('window.__injected || 0'), 0);
 });
 
+test('every example can be loaded from the upload dialog', async () => {
+    const expected = { 'banded-panels.glb': 4, 'two-cabinets.glb': 10, '170-cabinets.glb': 1020, 'demo-draco.glb': 5, 'demo-meshopt.glb': 5 };
+    const count = await app.ev(`document.querySelectorAll('.file-example-btn').length`);
+    assert.equal(count, Object.keys(expected).length);
+    
+    for (let i = 0; i < count; i++) {
+        await app.ev(`document.title = ''; window.partCatalog.fileUpload.show(); document.querySelectorAll('.file-example-btn')[${i}].click()`);
+        await app.waitFor(`document.title.endsWith('.glb')`, 20000);
+        const file = await app.ev(`document.title.split(' - ').pop()`);
+        assert.equal(await app.ev(`window.partCatalog.store.parts.length`), expected[file], file);
+        assert.equal(await app.ev(`document.querySelector('.file-upload-overlay').style.display`), 'none');
+    }
+});
+
 test('no errors in the page', () => {
     assert.deepEqual(app.errors, []);
 });

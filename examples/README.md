@@ -1,6 +1,6 @@
 # Example models
 
-Test models for trying out PartCatalog 3D. Load them with the file dialog or by dropping them on the page.
+Test models for trying out PartCatalog 3D. They are listed under "Or try an example" in the app's load dialog, and can also be opened with the file dialog or dropped on the page.
 
 | File | What it shows |
 | --- | --- |
