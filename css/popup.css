@@ -44,3 +44,10 @@
     pointer-events: none;
     z-index: 999;
 }
+@media (max-width: 700px) {
+    .mesh-popup {
+        min-width: 0;
+        max-width: calc(100vw - 20px);
+        font-size: 12px;
+    }
+}

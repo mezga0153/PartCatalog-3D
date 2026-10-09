@@ -26,6 +26,13 @@ export class CameraManager {
         };
     }
     
+    // Half of the narrower field of view, so framing also works on portrait screens
+    getHalfFov() {
+        const vertical = THREE.MathUtils.degToRad(this.camera.fov) / 2;
+        const horizontal = Math.atan(Math.tan(vertical) * this.camera.aspect);
+        return Math.min(vertical, horizontal);
+    }
+    
     // Frame the given object and remember the view for reset()
     fitToObject(object) {
         const box = new THREE.Box3().setFromObject(object);
@@ -37,7 +44,7 @@ export class CameraManager {
         
         const sphere = box.getBoundingSphere(new THREE.Sphere());
         const radius = Math.max(sphere.radius, 1e-3);
-        const distance = radius / Math.sin(THREE.MathUtils.degToRad(this.camera.fov) / 2) * 1.4;
+        const distance = radius / Math.sin(this.getHalfFov()) * 1.4;
         
         this.camera.near = distance / 100;
         this.camera.far = distance * 100;
@@ -55,7 +62,7 @@ export class CameraManager {
         if (box.isEmpty()) return;
         
         const sphere = box.getBoundingSphere(new THREE.Sphere());
-        const distance = Math.max(sphere.radius, 1e-3) / Math.sin(THREE.MathUtils.degToRad(this.camera.fov) / 2) * 1.3;
+        const distance = Math.max(sphere.radius, 1e-3) / Math.sin(this.getHalfFov()) * 1.3;
         const direction = this.camera.position.clone().sub(this.controls.target).normalize();
         
         this.camera.near = Math.min(this.camera.near, distance / 100);

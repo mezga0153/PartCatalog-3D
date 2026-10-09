@@ -34,6 +34,15 @@
     margin-bottom: -1px;
 }
 
+.sidebar-collapse {
+    display: none;
+    margin-left: auto;
+    border: none;
+    background: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+}
+
 .sidebar-tab:hover {
     color: white;
 }
@@ -394,4 +403,38 @@
     color: #ffd166;
     font: 600 12px sans-serif;
     white-space: nowrap;
+}
+
+/* Phones: the sidebar becomes a bottom sheet and the table scrolls sideways */
+@media (max-width: 700px) {
+    .sidebar {
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        max-height: 50vh;
+        padding: 8px 12px 12px;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .sidebar.collapsed .sidebar-pane {
+        display: none;
+    }
+    
+    .sidebar.collapsed .sidebar-tabs {
+        margin-bottom: 0;
+    }
+    
+    .sidebar-collapse {
+        display: block;
+    }
+    
+    .parts-scroll {
+        overflow-x: auto;
+    }
+    
+    .parts-table {
+        min-width: 560px;
+    }
 }

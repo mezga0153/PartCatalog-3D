@@ -194,3 +194,11 @@ body.file-drag-active::after {
     font: bold 1.5rem sans-serif;
     pointer-events: none;
 }
+
+@media (max-width: 500px) {
+    .file-upload-dialog {
+        min-width: 0;
+        width: calc(100vw - 32px);
+        padding: 32px 20px 24px;
+    }
+}
