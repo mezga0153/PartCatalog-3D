@@ -16,13 +16,13 @@ test('clicking a part selects it, shows the popup and dimension lines', async ()
     await app.waitFor(`window.partCatalog.store.selectedUuids.size === 1`);
     
     assert.match(await app.ev(POPUP), /^k2 - leva \| Dimensions: 600 × 500 × 18 mm .*Edge banding: W1 H3430 Egger \(500 mm\)/);
-    assert.deepEqual(await app.ev(`[...document.querySelectorAll('.dimension-label')].map(l => l.textContent)`), ['600 mm', '500 mm', '18 mm']);
+    assert.deepEqual(await app.ev(`[...document.querySelectorAll('.dimension-label')].map(l => l.textContent)`), ['L 600 mm', 'W 500 mm', 'T 18 mm']);
     assert.ok(await app.ev(`document.querySelector('#partsPane tr.selected') !== null`));
     
     // Units follow everywhere, including the open popup
     await app.ev(setValue('.units', 'in'));
     assert.match(await app.ev(POPUP), /Dimensions: 23 5\/8 × 19 11\/16 × 11\/16 in/);
-    assert.deepEqual(await app.ev(`[...document.querySelectorAll('.dimension-label')].map(l => l.textContent)`), ['23 5/8 in', '19 11/16 in', '11/16 in']);
+    assert.deepEqual(await app.ev(`[...document.querySelectorAll('.dimension-label')].map(l => l.textContent)`), ['L 23 5/8 in', 'W 19 11/16 in', 'T 11/16 in']);
     await app.ev(setValue('.units', 'mm'));
     
     // Clicking empty space deselects

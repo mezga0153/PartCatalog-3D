@@ -405,6 +405,11 @@
     white-space: nowrap;
 }
 
+.dimension-axis {
+    color: rgba(255, 209, 102, 0.6);
+    font-weight: 700;
+}
+
 /* Phones: the sidebar becomes a bottom sheet and the table scrolls sideways */
 @media (max-width: 700px) {
     .sidebar {
