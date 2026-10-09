@@ -111,7 +111,7 @@ document.addEventListener('alpine:init', () => {
             const meshBtn = document.createElement('button');
             meshBtn.className = 'btn btn-outline-primary btn-sm w-100 text-start mesh-info mb-2';
             meshBtn.innerHTML = `
-                <div class="fw-bold">${mesh.name} • ${mesh.dimensions} • <span class="material-name">${mesh.materialName}</span></div>
+                <div class="fw-bold">${escapeHtml(mesh.name)} • ${mesh.dimensions} • <span class="material-name">${escapeHtml(mesh.materialName)}</span></div>
             `;
             
             // Explain merged/split parts
@@ -120,7 +120,7 @@ document.addEventListener('alpine:init', () => {
                 partNote = document.createElement('div');
                 partNote.className = 'part-note';
                 partNote.innerHTML = mesh.splitFromUuid
-                    ? `<i class="bi bi-scissors"></i> Split from ${mesh.name} (one mesh per material)`
+                    ? `<i class="bi bi-scissors"></i> Split from ${escapeHtml(mesh.name)} (one mesh per material)`
                     : `<i class="bi bi-layers"></i> Merged from ${mesh.mergedCount} meshes (one per material)`;
             }
             

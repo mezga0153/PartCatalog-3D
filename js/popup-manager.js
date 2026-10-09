@@ -41,7 +41,7 @@ class PopupManager {
         
         // Create popup content
         this.popup.innerHTML = `
-            <div class="mesh-popup-title">${meshData.name}</div>
+            <div class="mesh-popup-title">${escapeHtml(meshData.name)}</div>
             <div class="mesh-popup-info">
                 <span class="mesh-popup-label">Dimensions:</span> 
                 <span class="mesh-popup-value">${meshData.dimensions}</span>
@@ -52,7 +52,7 @@ class PopupManager {
             </div>
             <div class="mesh-popup-info">
                 <span class="mesh-popup-label">Material:</span> 
-                <span class="mesh-popup-value">${meshData.materialName}</span>
+                <span class="mesh-popup-value">${escapeHtml(meshData.materialName)}</span>
             </div>
         `;
         

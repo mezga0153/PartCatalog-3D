@@ -195,7 +195,7 @@ class ToolbarManager {
                 <i class="bi bi-check-circle-fill"></i>
                 <div>
                     <div style="font-weight: bold;">File Loaded!</div>
-                    <div style="font-size: 12px; opacity: 0.9;">${filename}</div>
+                    <div style="font-size: 12px; opacity: 0.9;">${escapeHtml(filename)}</div>
                 </div>
             </div>
         `;
