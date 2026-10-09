@@ -11,7 +11,9 @@ export class SummaryPanel {
         this.sheet = readSetting('sheet', { length: 2800, width: 2070, waste: 10 });
         
         this.build();
-        store.subscribe(() => this.render());
+        store.subscribe(change => {
+            if (change !== 'selection') this.render();
+        });
         this.render();
     }
     

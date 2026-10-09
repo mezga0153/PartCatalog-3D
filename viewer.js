@@ -87,27 +87,14 @@ function initializeViewer() {
         meshManager.meshVertices.clear();
         
         // Clear UI store
-        if (meshStore) {
-            meshStore.modelKey = null;
-            meshStore.meshes = [];
-            meshStore.selectedUuids.clear();
-            meshStore.isolate = false;
-            meshStore.hideBoundingBoxes();
-            meshStore.updateUI();
-        }
+        meshStore.reset();
         
         // Process meshes
         meshManager.processModel(model, gltf.parser && gltf.parser.associations);
         model.updateMatrixWorld(true);
         
         // Process each part for UI
-        meshManager.getParts().forEach((part) => {
-            const partData = meshManager.describePart(part);
-            
-            if (partData && meshStore) {
-                meshStore.addMesh(partData);
-            }
-        });
+        meshStore.addMeshes(meshManager.getParts().map(part => meshManager.describePart(part)).filter(Boolean));
         
         meshStore.restoreEdits(filename);
         

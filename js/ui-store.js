@@ -32,8 +32,24 @@ export const meshStore = {
     boundingBoxes: [], // Bounding box wireframes in the scene
     
     addMesh(meshData) {
-        this.meshes.push(this.createEntry(meshData));
-        
+        this.addMeshes([meshData]);
+    },
+    
+    // Add many parts with a single re-render
+    addMeshes(list) {
+        list.forEach(meshData => this.meshes.push(this.createEntry(meshData)));
+        this.uuidIndex = null;
+        this.updateUI();
+    },
+    
+    // Forget the current model's parts and view state
+    reset() {
+        this.modelKey = null;
+        this.meshes = [];
+        this.uuidIndex = null;
+        this.selectedUuids = new Set();
+        this.isolate = false;
+        this.hideBoundingBoxes();
         this.updateUI();
     },
     
@@ -119,6 +135,7 @@ export const meshStore = {
             
             this.meshes.splice(this.meshes.indexOf(entry), 1, ...pieces);
         }
+        this.uuidIndex = null;
         
         this.updateUI();
         if (window.exportManager) {
@@ -133,9 +150,11 @@ export const meshStore = {
         this.listeners.push(listener);
     },
     
-    updateUI() {
-        this.listeners.forEach(listener => listener());
-        this.scheduleSave();
+    // Notify views; change is 'selection' when only the selection changed,
+    // so views can skip work that doesn't depend on it
+    updateUI(change = 'all') {
+        this.listeners.forEach(listener => listener(change));
+        if (change !== 'selection') this.scheduleSave();
     },
     
     // Remember edits (names, quantities, notes, exclusions) for this model
@@ -155,8 +174,15 @@ export const meshStore = {
         this.saveTimer = setTimeout(() => saveEdits(this.modelKey, this.meshes), 300);
     },
     
+    // Lookup by uuid, rebuilt whenever the list of parts changes
+    uuidIndex: null,
+    
     findMeshByUuid(uuid) {
-        return this.meshes.find(m => m.uuid === uuid);
+        if (!this.uuidIndex || this.uuidIndexOf !== this.meshes || this.uuidIndex.size !== this.meshes.length) {
+            this.uuidIndex = new Map(this.meshes.map(m => [m.uuid, m]));
+            this.uuidIndexOf = this.meshes;
+        }
+        return this.uuidIndex.get(uuid);
     },
     
     findMeshByThreeObject(threeObject) {
@@ -280,7 +306,7 @@ export const meshStore = {
             if (mesh) this.refreshAppearance(mesh);
         });
         
-        this.updateUI();
+        this.updateUI('selection');
     },
     
     // Isolate: show the selected parts in their own materials and fade the rest
@@ -302,7 +328,7 @@ export const meshStore = {
             if (mesh) this.refreshAppearance(mesh);
         });
         
-        this.updateUI();
+        this.updateUI('selection');
     },
     
     toggleVisibility(uuid) {

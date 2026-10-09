@@ -54,7 +54,13 @@ export class PartsTable {
         this.groupBy = GROUPINGS[settings.groupBy] !== undefined ? settings.groupBy : 'none';
         
         this.build();
-        store.subscribe(() => this.render());
+        store.subscribe(change => {
+            if (change === 'selection') {
+                this.renderSelection();
+            } else {
+                this.render();
+            }
+        });
         store.hoverListeners.push(uuid => this.highlightHovered(uuid));
         this.render();
     }
@@ -218,6 +224,30 @@ export class PartsTable {
         if (row) row.classList.add('hovered');
     }
     
+    // Update only the selected rows; re-render if a selected part's section is collapsed
+    renderSelection() {
+        const revealEntry = this.store.revealUuid && this.store.findMeshByUuid(this.store.revealUuid);
+        const grouping = GROUPINGS[this.groupBy];
+        if (revealEntry && grouping && this.collapsedSections.has(`${this.groupBy}:${grouping.key(revealEntry)}`)) {
+            this.render();
+            return;
+        }
+        
+        this.tbody.querySelectorAll('tr[data-uuids]').forEach(tr => {
+            tr.classList.toggle('selected', tr.dataset.uuids.split(',').some(uuid => this.store.isSelected(uuid)));
+        });
+        this.revealSelected();
+    }
+    
+    revealSelected() {
+        const revealUuid = this.store.revealUuid;
+        if (!revealUuid) return;
+        
+        this.store.revealUuid = null;
+        const row = [...this.tbody.querySelectorAll('tr[data-uuids]')].find(tr => tr.dataset.uuids.split(',').includes(revealUuid));
+        if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    
     render() {
         this.saveSettings();
         
@@ -248,27 +278,24 @@ export class PartsTable {
         this.includeAll.indeterminate = includedCount > 0 && includedCount < shownEntries.length;
         this.includeAll.disabled = shownEntries.length === 0;
         
-        this.tbody.innerHTML = '';
+        const fragment = document.createDocumentFragment();
         sections.forEach(section => {
             const sectionId = `${this.groupBy}:${section.key}`;
             const isCollapsed = this.collapsedSections.has(sectionId);
             
             if (section.key !== null) {
-                this.tbody.appendChild(this.createSectionRow(section, sectionId, isCollapsed));
+                fragment.appendChild(this.createSectionRow(section, sectionId, isCollapsed));
             }
             if (!isCollapsed) {
-                section.rows.forEach(row => this.tbody.appendChild(this.createRow(row)));
+                section.rows.forEach(row => fragment.appendChild(this.createRow(row)));
             }
         });
+        this.tbody.replaceChildren(fragment);
         
         this.emptyEl.textContent = total === 0 ? 'Load a model to see its parts.' : (shownEntries.length === 0 ? 'No parts match your search.' : '');
         
         this.highlightHovered(this.store.sceneHoverUuid);
-        if (revealUuid) {
-            this.store.revealUuid = null;
-            const row = [...this.tbody.querySelectorAll('tr[data-uuids]')].find(tr => tr.dataset.uuids.split(',').includes(revealUuid));
-            if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
+        this.revealSelected();
     }
     
     createSectionRow(section, sectionId, isCollapsed) {
