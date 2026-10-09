@@ -34,6 +34,22 @@ export class InteractionManager {
             if (dragDistance > 5) {
                 this.isDragging = true;
             }
+            
+            // Highlight the part under the pointer (once per frame, not while dragging)
+            if (event.buttons === 0) {
+                this.pendingHover = event;
+                if (!this.hoverFrame) {
+                    this.hoverFrame = requestAnimationFrame(() => {
+                        this.hoverFrame = null;
+                        this.updateHover(this.pendingHover);
+                    });
+                }
+            }
+        });
+        
+        this.renderer.domElement.addEventListener('mouseleave', () => {
+            meshStore.setSceneHover(null);
+            this.renderer.domElement.style.cursor = '';
         });
         
         this.renderer.domElement.addEventListener('click', (event) => {
@@ -53,6 +69,23 @@ export class InteractionManager {
                 this.popupManager.hidePopup();
             }
         });
+    }
+    
+    // The part under the pointer, if any
+    pickPart(event) {
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        
+        const intersects = this.raycaster.intersectObjects(this.getVisibleMeshes());
+        return intersects.length > 0 ? this.meshManager.getPartForMesh(intersects[0].object) : null;
+    }
+    
+    updateHover(event) {
+        const part = this.pickPart(event);
+        meshStore.setSceneHover(part ? part.object.uuid : null);
+        this.renderer.domElement.style.cursor = part ? 'pointer' : '';
     }
     
     getVisibleMeshes() {
@@ -83,7 +116,7 @@ export class InteractionManager {
             
             if (meshStore && part) {
                 // Use the unified selection method
-                meshStore.selectMesh(part.object.uuid);
+                meshStore.select([part.object.uuid], { reveal: true });
                 
                 // Show popup with part information
                 const meshData = meshStore.findMeshByUuid(part.object.uuid);

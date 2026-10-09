@@ -237,8 +237,29 @@ export const meshStore = {
         this.select([uuid]);
     },
     
-    // Select a set of parts; selecting the current selection again clears it
-    select(uuids) {
+    // Part hovered in the 3D view, shown in the table and with a bounding box
+    sceneHoverUuid: null,
+    hoverListeners: [],
+    
+    setSceneHover(uuid) {
+        if (this.sceneHoverUuid === uuid) return;
+        this.sceneHoverUuid = uuid;
+        
+        if (uuid) {
+            this.showBoundingBoxes([uuid]);
+        } else {
+            this.hideBoundingBoxes();
+        }
+        this.hoverListeners.forEach(listener => listener(uuid));
+    },
+    
+    // Uuid of a part the table should scroll to after the next render
+    revealUuid: null,
+    
+    // Select a set of parts; selecting the current selection again clears it.
+    // With reveal, the parts list scrolls to the selected part.
+    select(uuids, { reveal = false } = {}) {
+        this.revealUuid = reveal ? uuids[0] : null;
         const isSameSelection = uuids.length === this.selectedUuids.size && uuids.every(uuid => this.selectedUuids.has(uuid));
         const previous = [...this.selectedUuids];
         

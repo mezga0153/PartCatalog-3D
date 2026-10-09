@@ -54,6 +54,7 @@ export class PartsTable {
         
         this.build();
         store.subscribe(() => this.render());
+        store.hoverListeners.push(uuid => this.highlightHovered(uuid));
         this.render();
     }
     
@@ -192,8 +193,26 @@ export class PartsTable {
         });
     }
     
+    // Mark the row of a part hovered in the 3D view
+    highlightHovered(uuid) {
+        this.tbody.querySelectorAll('tr.hovered').forEach(tr => tr.classList.remove('hovered'));
+        if (!uuid) return;
+        
+        const row = [...this.tbody.querySelectorAll('tr[data-uuids]')].find(tr => tr.dataset.uuids.split(',').includes(uuid));
+        if (row) row.classList.add('hovered');
+    }
+    
     render() {
         this.saveSettings();
+        
+        // Open the section holding a part selected in the 3D view
+        const revealUuid = this.store.revealUuid;
+        const grouping = GROUPINGS[this.groupBy];
+        const revealEntry = revealUuid && this.store.findMeshByUuid(revealUuid);
+        if (revealEntry && grouping) {
+            this.collapsedSections.delete(`${this.groupBy}:${grouping.key(revealEntry)}`);
+        }
+        
         const sections = this.getSections();
         const shownEntries = sections.flatMap(section => section.entries);
         const total = this.store.meshes.length;
@@ -226,6 +245,13 @@ export class PartsTable {
         });
         
         this.emptyEl.textContent = total === 0 ? 'Load a model to see its parts.' : (shownEntries.length === 0 ? 'No parts match your search.' : '');
+        
+        this.highlightHovered(this.store.sceneHoverUuid);
+        if (revealUuid) {
+            this.store.revealUuid = null;
+            const row = [...this.tbody.querySelectorAll('tr[data-uuids]')].find(tr => tr.dataset.uuids.split(',').includes(revealUuid));
+            if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
     }
     
     createSectionRow(section, sectionId, isCollapsed) {
@@ -263,8 +289,9 @@ export class PartsTable {
         
         const tr = document.createElement('tr');
         tr.dataset.uuid = entry.uuid;
+        tr.dataset.uuids = uuids.join(',');
         tr.className = [
-            uuids.every(uuid => this.store.isSelected(uuid)) ? 'selected' : '',
+            uuids.some(uuid => this.store.isSelected(uuid)) ? 'selected' : '',
             isHidden ? 'is-hidden' : '',
             includedCount === 0 ? 'is-excluded' : ''
         ].join(' ');
