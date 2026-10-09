@@ -9,7 +9,16 @@ export class MeshManager {
         this.meshVertices = new Map();
     }
     
+    // Forget the previous model's meshes and parts
+    reset() {
+        this.allMeshes = [];
+        this.parts = [];
+        this.partByMesh = new Map();
+        this.meshVertices = new Map();
+    }
+    
     processModel(model, associations) {
+        this.reset();
         this.collectMeshes(model);
         this.collectParts(associations);
         assignAssemblies(this.parts, model);

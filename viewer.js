@@ -65,26 +65,12 @@ function initializeViewer() {
 
     // Function to process loaded model
     function processLoadedModel(gltf, filename) {
-        // Clear any existing model
-        sceneManager.scene.children = sceneManager.scene.children.filter(child => 
-            child.type === 'DirectionalLight' || 
-            child.type === 'AmbientLight' || 
-            child.type === 'HemisphereLight' || 
-            child.type === 'Mesh' || 
-            child.type === 'GridHelper'
-        );
-        
         const model = gltf.scene;
         
-        // Clear mesh manager
-        meshManager.allMeshes = [];
-        meshManager.parts = [];
-        meshManager.meshVertices.clear();
-        
-        // Clear UI store
+        // Clear the previous model's parts and view state
         meshStore.reset();
         
-        // Process meshes
+        // Process meshes (this also resets the mesh manager)
         meshManager.processModel(model, gltf.parser && gltf.parser.associations);
         model.updateMatrixWorld(true);
         
@@ -93,7 +79,7 @@ function initializeViewer() {
         
         meshStore.restoreEdits(filename);
         
-        sceneManager.scene.add(model);
+        sceneManager.setModel(model);
         toolbarManager.resetExplodeState();
         window.exportManager.updateButtonState();
         

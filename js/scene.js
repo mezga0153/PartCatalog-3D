@@ -1,5 +1,22 @@
 import * as THREE from 'three';
 
+// Free the GPU resources of a model's geometries, materials and textures. Parts
+// may be showing a shared highlight material, so dispose their own material.
+function disposeModel(model) {
+    model.traverse((child) => {
+        if (!child.isMesh) return;
+        child.geometry.dispose();
+        
+        const material = child.userData.originalMaterial || child.material;
+        (Array.isArray(material) ? material : [material]).forEach((m) => {
+            Object.values(m).forEach(value => {
+                if (value && value.isTexture) value.dispose();
+            });
+            m.dispose();
+        });
+    });
+}
+
 export class SceneManager {
     constructor() {
         this.scene = new THREE.Scene();
@@ -7,6 +24,16 @@ export class SceneManager {
         
         this.setupLighting();
         this.setupEnvironment();
+    }
+    
+    // Show a new model, removing and freeing the previous one
+    setModel(model) {
+        if (this.model) {
+            this.scene.remove(this.model);
+            disposeModel(this.model);
+        }
+        this.model = model;
+        if (model) this.scene.add(model);
     }
     
     setupLighting() {

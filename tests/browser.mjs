@@ -91,6 +91,7 @@ export async function launch({ width = 1400, height = 900, mobile = false } = {}
     // Evaluate an expression in the page and return its (JSON) value
     const ev = async (expression) => {
         const response = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true });
+        if (response.error) throw new Error(`${response.error.message}\n${expression}`);
         if (response.result.exceptionDetails) {
             const details = response.result.exceptionDetails;
             throw new Error(`In page: ${details.exception?.description || details.text}\n${expression}`);
