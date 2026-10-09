@@ -237,21 +237,12 @@ document.addEventListener('alpine:init', () => {
             if (!mesh) return;
             
             mesh.isHidden = !mesh.isHidden;
+            mesh.threeMesh.visible = !mesh.isHidden;
             
-            if (mesh.isHidden) {
-                mesh.threeMesh.material.transparent = true;
-                mesh.threeMesh.material.opacity = 0;
-                // Hide bounding box if this mesh is currently hovered
-                if (this.hoveredMeshUuid === uuid) {
-                    this.hideCurrentBoundingBox();
-                }
-            } else {
-                mesh.threeMesh.material.opacity = mesh.threeMesh.userData.originalOpacity || 1;
-                if (mesh.threeMesh.material.opacity === 1) {
-                    mesh.threeMesh.material.transparent = false;
-                }
+            // Hide bounding box if this mesh is currently hovered
+            if (mesh.isHidden && this.hoveredMeshUuid === uuid) {
+                this.hideCurrentBoundingBox();
             }
-            mesh.threeMesh.material.needsUpdate = true;
             this.updateUI();
         },
         
