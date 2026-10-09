@@ -38,6 +38,8 @@ export class PopupManager {
     
     showPopup(part, meshData) {
         this.targetMesh = part.object;
+        this.part = part;
+        this.meshData = meshData;
         
         // Get part center position
         const box = new THREE.Box3();
@@ -79,6 +81,19 @@ export class PopupManager {
         const edges = bandedEdges(meshData);
         if (edges.length === 0) return 'none detected';
         return edges.map(([name, material, length]) => `${name} ${escapeHtml(material)} (${formatLengthWithUnit(length)})`).join(', ');
+    }
+    
+    // Re-render the open popup, e.g. after switching units or renaming the part.
+    // getEntry looks up the part's current data; if it's gone (split/merged), hide.
+    refresh(getEntry) {
+        if (!this.isVisible()) return;
+        
+        const meshData = getEntry(this.meshData.uuid);
+        if (meshData) {
+            this.showPopup(this.part, meshData);
+        } else {
+            this.hidePopup();
+        }
     }
     
     hidePopup() {

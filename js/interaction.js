@@ -16,6 +16,11 @@ export class InteractionManager {
         // Initialize popup manager
         this.popupManager = new PopupManager(renderer, camera);
         
+        // Keep the popup in step with the list (units, names, quantities)
+        meshStore.subscribe(change => {
+            if (change !== 'selection') this.popupManager.refresh(uuid => meshStore.findMeshByUuid(uuid));
+        });
+        
         this.setupEventListeners();
     }
     
