@@ -2,7 +2,7 @@
     position: fixed;
     top: 20px;
     left: 20px;
-    width: 520px;
+    width: 560px;
     max-height: calc(100vh - 40px);
     background: rgba(0, 0, 0, 0.75);
     border-radius: 6px;
@@ -171,8 +171,13 @@
     word-break: break-word;
 }
 
-.parts-table td.edges {
+.parts-table td.edges,
+.parts-table td.grain {
     white-space: nowrap;
+}
+
+.parts-table td.grain {
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .edge-tag {

@@ -41,6 +41,7 @@ export const meshStore = {
             materialName: meshData.materialName,
             allMaterials: meshData.allMaterials,
             edges: meshData.edges,
+            grain: meshData.grain,
             assembly: part.assembly,
             assemblyFromName: part.assemblyFromName,
             isHidden: false,

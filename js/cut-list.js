@@ -13,7 +13,7 @@ export function bandedEdges(entry) {
 export function partSignature(entry) {
     const { length, width, thickness } = entry.size;
     const edges = bandedEdges(entry).map(([name, material]) => `${name}=${material}`).join(',');
-    return [formatLength(length), formatLength(width), formatLength(thickness), entry.materialName, edges].join('|');
+    return [formatLength(length), formatLength(width), formatLength(thickness), entry.materialName, edges, entry.grain || ''].join('|');
 }
 
 // Group entries with the same signature, in order of first appearance
@@ -26,3 +26,8 @@ export function groupIdenticalParts(entries) {
     });
     return [...groups.values()];
 }
+
+export const GRAIN_LABELS = {
+    L: 'Along length',
+    W: 'Along width'
+};

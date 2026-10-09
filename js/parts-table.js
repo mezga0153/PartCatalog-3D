@@ -1,6 +1,6 @@
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
-import { groupIdenticalParts, bandedEdges } from './cut-list.js';
+import { groupIdenticalParts, bandedEdges, GRAIN_LABELS } from './cut-list.js';
 
 // Each table row is a group of one or more identical parts
 const COLUMNS = [
@@ -10,7 +10,8 @@ const COLUMNS = [
     { key: 'width', label: 'W', numeric: true, sortValue: row => row.entries[0].size.width },
     { key: 'thickness', label: 'T', numeric: true, sortValue: row => row.entries[0].size.thickness },
     { key: 'material', label: 'Material', sortValue: row => row.entries[0].materialName },
-    { key: 'edges', label: 'Edges', numeric: true, sortValue: row => bandedEdges(row.entries[0]).length }
+    { key: 'edges', label: 'Edges', numeric: true, sortValue: row => bandedEdges(row.entries[0]).length },
+    { key: 'grain', label: 'Grain', sortValue: row => row.entries[0].grain || '' }
 ];
 
 // "a, b, c +2 more" for combined rows
@@ -270,6 +271,7 @@ export class PartsTable {
             <td class="num">${formatLength(entry.size.thickness)}</td>
             <td class="material">${escapeHtml(entry.materialName)}</td>
             <td class="edges">${this.formatEdges(entry)}</td>
+            <td class="grain" title="${entry.grain ? `Grain ${GRAIN_LABELS[entry.grain].toLowerCase()} (from the texture)` : 'No grain direction detected'}">${entry.grain ? `<i class="bi ${entry.grain === 'L' ? 'bi-arrow-left-right' : 'bi-arrow-down-up'}"></i> ${entry.grain}` : '–'}</td>
             <td class="actions"></td>
         `;
         

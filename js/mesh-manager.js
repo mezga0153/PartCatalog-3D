@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { textureGrainAxis } from './grain.js';
 
 export class MeshManager {
     constructor() {
@@ -268,7 +269,8 @@ export class MeshManager {
             boxInfo,
             materialName: boardMaterial || this.getPartMaterialName(part),
             allMaterials: this.getPartMaterialName(part),
-            edges
+            edges,
+            grain: this.analyzeGrain(part, boxInfo, boardMaterial)
         };
     }
     
@@ -348,6 +350,78 @@ export class MeshManager {
                 W2: widthEdges[1] || null
             }
         };
+    }
+    
+    // Grain direction of a textured board: 'L' (along the length), 'W' or null.
+    // Work out which way the texture's grain runs on the large faces, using the
+    // UV mapping to turn the texture axis into a direction on the panel.
+    analyzeGrain(part, boxInfo, boardMaterial) {
+        const { min, max, axes } = boxInfo;
+        const [lengthAxis, widthAxis, thicknessAxis] = axes;
+        const extent = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]);
+        const tolerance = extent * 1e-4 + 1e-9;
+        
+        let alongLength = 0;
+        let alongWidth = 0;
+        let grainAxis = null;
+        
+        const p = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+        const uv = [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()];
+        const dp1 = new THREE.Vector3();
+        const dp2 = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        
+        part.meshes.forEach((mesh) => {
+            const material = mesh.userData.originalMaterial || mesh.material;
+            const uvs = mesh.geometry.getAttribute('uv');
+            if (!material || !material.map || !uvs || this.getMeshMaterialName(mesh) !== boardMaterial) return;
+            
+            const axis = textureGrainAxis(material.map);
+            if (!axis) return;
+            grainAxis = axis;
+            
+            const position = mesh.geometry.getAttribute('position');
+            const index = mesh.geometry.getIndex();
+            const triangleCount = (index ? index.count : position.count) / 3;
+            const toPart = mesh === part.object ? null : mesh.matrix;
+            
+            for (let t = 0; t < triangleCount; t++) {
+                for (let k = 0; k < 3; k++) {
+                    const i = index ? index.getX(t * 3 + k) : t * 3 + k;
+                    p[k].fromBufferAttribute(position, i);
+                    if (toPart) p[k].applyMatrix4(toPart);
+                    uv[k].fromBufferAttribute(uvs, i);
+                }
+                
+                // Only the large faces show the grain
+                const onLargeFace = [min[thicknessAxis], max[thicknessAxis]].some(plane =>
+                    p.every(corner => Math.abs(corner.getComponent(thicknessAxis) - plane) < tolerance));
+                if (!onLargeFace) continue;
+                
+                // Direction in which the grain texture axis increases on this triangle
+                dp1.subVectors(p[1], p[0]);
+                dp2.subVectors(p[2], p[0]);
+                const du1 = uv[1].x - uv[0].x, dv1 = uv[1].y - uv[0].y;
+                const du2 = uv[2].x - uv[0].x, dv2 = uv[2].y - uv[0].y;
+                const det = du1 * dv2 - du2 * dv1;
+                if (Math.abs(det) < 1e-12) continue;
+                
+                if (axis === 'u') {
+                    direction.copy(dp1).multiplyScalar(dv2).addScaledVector(dp2, -dv1);
+                } else {
+                    direction.copy(dp2).multiplyScalar(du1).addScaledVector(dp1, -du2);
+                }
+                if (direction.lengthSq() === 0) continue;
+                direction.normalize();
+                
+                const area = dp1.clone().cross(dp2).length() / 2;
+                alongLength += Math.abs(direction.getComponent(lengthAxis)) * area;
+                alongWidth += Math.abs(direction.getComponent(widthAxis)) * area;
+            }
+        });
+        
+        if (!grainAxis || alongLength === alongWidth) return null;
+        return alongLength > alongWidth ? 'L' : 'W';
     }
     
     // Replace a multi-mesh part with one part per mesh

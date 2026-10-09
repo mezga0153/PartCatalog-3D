@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { escapeHtml } from './html.js';
 import { formatLength } from './units.js';
-import { bandedEdges } from './cut-list.js';
+import { bandedEdges, GRAIN_LABELS } from './cut-list.js';
 
 export class PopupManager {
     constructor(renderer, camera) {
@@ -62,6 +62,10 @@ export class PopupManager {
             <div class="mesh-popup-info">
                 <span class="mesh-popup-label">Edge banding:</span> 
                 <span class="mesh-popup-value">${this.formatBanding(meshData)}</span>
+            </div>
+            <div class="mesh-popup-info">
+                <span class="mesh-popup-label">Grain:</span> 
+                <span class="mesh-popup-value">${meshData.grain ? GRAIN_LABELS[meshData.grain].toLowerCase() : 'none detected'}</span>
             </div>
         `;
         
