@@ -3,11 +3,11 @@ class MeshManager {
         this.allMeshes = [];
         this.boxes = [];
         this.meshVertices = new Map();
-        this.garbageVertexKeys = new Set();
     }
     
     processModel(model) {
         this.collectMeshes(model);
+        this.compactGeometries();
         this.processVertices();
         this.enhanceMaterials(model);
         
@@ -23,29 +23,82 @@ class MeshManager {
         });
     }
     
-    processVertices() {
-        const allVertexKeys = new Map();
-        
+    // Some exporters (e.g. the SketchUp glTF exporter) share one vertex buffer
+    // between many meshes and select each mesh's triangles via its index buffer.
+    // Three.js then gives every mesh the whole shared position attribute, so its
+    // bounding box, dimensions and explode direction include vertices that belong
+    // to other parts. Rebuild each indexed geometry with only the vertices it uses.
+    compactGeometries() {
         this.allMeshes.forEach((mesh) => {
-            const vertices = this.getUniqueVertices(mesh.geometry);
-            this.meshVertices.set(mesh, vertices);
-            
-            vertices.forEach(vertex => {
-                const count = allVertexKeys.get(vertex.key) || 0;
-                allVertexKeys.set(vertex.key, count + 1);
-            });
+            mesh.geometry = this.compactGeometry(mesh.geometry);
+        });
+    }
+    
+    compactGeometry(geometry) {
+        const index = geometry.getIndex();
+        const position = geometry.getAttribute('position');
+        if (!index || !position) return geometry;
+        if (Object.keys(geometry.morphAttributes).length > 0) return geometry;
+        
+        // Map old vertex index -> new vertex index, in order of first use
+        const remap = new Map();
+        const oldIndices = [];
+        for (let i = 0; i < index.count; i++) {
+            const oldIndex = index.getX(i);
+            if (!remap.has(oldIndex)) {
+                remap.set(oldIndex, remap.size);
+                oldIndices.push(oldIndex);
+            }
+        }
+        
+        if (oldIndices.length === position.count) return geometry;
+        
+        const compacted = new THREE.BufferGeometry();
+        compacted.name = geometry.name;
+        compacted.userData = geometry.userData;
+        
+        Object.keys(geometry.attributes).forEach((name) => {
+            compacted.setAttribute(name, this.compactAttribute(geometry.getAttribute(name), oldIndices));
         });
         
-        // Find garbage vertices that appear in ALL meshes
-        const totalMeshCount = this.allMeshes.length;
-        this.garbageVertexKeys = new Set();
-        allVertexKeys.forEach((count, key) => {
-            if (count === totalMeshCount) {
-                this.garbageVertexKeys.add(key);
+        const newIndex = oldIndices.length > 65535 ? new Uint32Array(index.count) : new Uint16Array(index.count);
+        for (let i = 0; i < index.count; i++) {
+            newIndex[i] = remap.get(index.getX(i));
+        }
+        compacted.setIndex(new THREE.BufferAttribute(newIndex, 1));
+        
+        geometry.groups.forEach((group) => {
+            compacted.addGroup(group.start, group.count, group.materialIndex);
+        });
+        
+        compacted.computeBoundingBox();
+        compacted.computeBoundingSphere();
+        
+        return compacted;
+    }
+    
+    compactAttribute(attribute, oldIndices) {
+        const itemSize = attribute.itemSize;
+        const array = new attribute.array.constructor(oldIndices.length * itemSize);
+        
+        // Copy raw (possibly normalized or interleaved) values without conversion
+        const source = attribute.isInterleavedBufferAttribute ? attribute.data.array : attribute.array;
+        const stride = attribute.isInterleavedBufferAttribute ? attribute.data.stride : itemSize;
+        const offset = attribute.isInterleavedBufferAttribute ? attribute.offset : 0;
+        
+        oldIndices.forEach((oldIndex, newIndex) => {
+            for (let k = 0; k < itemSize; k++) {
+                array[newIndex * itemSize + k] = source[oldIndex * stride + offset + k];
             }
         });
         
-        console.log(`Found ${this.garbageVertexKeys.size} garbage vertices in ${totalMeshCount} meshes`);
+        return new THREE.BufferAttribute(array, itemSize, attribute.normalized);
+    }
+    
+    processVertices() {
+        this.allMeshes.forEach((mesh) => {
+            this.meshVertices.set(mesh, this.getUniqueVertices(mesh.geometry));
+        });
     }
     
     getUniqueVertices(geometry, precision = 6) {
@@ -69,8 +122,7 @@ class MeshManager {
     }
     
     getFilteredVertices(mesh) {
-        const allVertices = this.meshVertices.get(mesh);
-        return allVertices ? allVertices.filter(vertex => !this.garbageVertexKeys.has(vertex.key)) : [];
+        return this.meshVertices.get(mesh) || [];
     }
     
     enhanceMaterials(model) {

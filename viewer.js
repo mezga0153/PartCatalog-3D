@@ -60,7 +60,6 @@ function initializeViewer() {
         meshManager.allMeshes = [];
         meshManager.boxes = [];
         meshManager.meshVertices.clear();
-        meshManager.garbageVertexKeys.clear();
         
         // Clear UI store
         const meshStore = Alpine.store('meshStore');
