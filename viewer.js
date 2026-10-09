@@ -36,6 +36,10 @@ function initializeViewer() {
 
     // Initialize toolbar
     const toolbarManager = new ToolbarManager(cameraManager, meshManager);
+    
+    // Used by the UI store to split/merge parts
+    window.meshManager = meshManager;
+    window.toolbarManager = toolbarManager;
 
     // Initialize interaction
     const interactionManager = new InteractionManager(renderer, cameraManager.camera, meshManager);

@@ -23,8 +23,56 @@ document.addEventListener('alpine:init', () => {
                 isHidden: false,
                 isKept: false,
                 threeObject: part.object,
-                threeMeshes: part.meshes
+                threeMeshes: part.meshes,
+                // Multi-material parts are merged from several meshes and can be split back
+                mergedCount: part.meshes.length,
+                splitFromUuid: part.splitFrom ? part.splitFrom.object.uuid : null
             };
+        },
+        
+        // Split a merged part into one entry per mesh, or merge split entries back
+        toggleSplit(uuid) {
+            const entry = this.findMeshByUuid(uuid);
+            const meshManager = window.meshManager;
+            if (!entry || !meshManager) return;
+            
+            // The part list is about to change, so drop transient view state
+            if (window.toolbarManager) window.toolbarManager.collapse();
+            this.hideCurrentBoundingBox();
+            if (this.selectedMeshUuid) this.deselectCurrentMesh();
+            
+            if (entry.splitFromUuid) {
+                const siblings = this.meshes.filter(m => m.splitFromUuid === entry.splitFromUuid);
+                
+                // The merged part is hidden/kept only if all its pieces were
+                const isHidden = siblings.every(m => m.isHidden);
+                const isKept = siblings.every(m => m.isKept);
+                siblings.forEach(m => {
+                    if (m.isHidden !== isHidden) this.toggleVisibility(m.uuid);
+                    if (m.isKept !== isKept) this.toggleKeep(m.uuid);
+                });
+                
+                const partData = meshManager.describePart(meshManager.mergePart(entry.splitFromUuid));
+                const index = this.meshes.indexOf(siblings[0]);
+                this.meshes = this.meshes.filter(m => !siblings.includes(m));
+                if (partData) {
+                    this.meshes.splice(index, 0, { ...this.createEntry(partData), isHidden, isKept });
+                }
+            } else {
+                // Pieces inherit hidden/kept state; their meshes already look that way
+                const pieces = meshManager.splitPart(uuid)
+                    .map(piece => meshManager.describePart(piece))
+                    .filter(Boolean)
+                    .map(partData => ({ ...this.createEntry(partData), isHidden: entry.isHidden, isKept: entry.isKept }));
+                if (pieces.length === 0) return;
+                
+                this.meshes.splice(this.meshes.indexOf(entry), 1, ...pieces);
+            }
+            
+            this.updateUI();
+            if (window.exportManager) {
+                window.exportManager.updateButtonState();
+            }
         },
         
         updateUI() {
@@ -66,6 +114,16 @@ document.addEventListener('alpine:init', () => {
                 <div class="fw-bold">${mesh.name} • ${mesh.dimensions} • <span class="material-name">${mesh.materialName}</span></div>
             `;
             
+            // Explain merged/split parts
+            let partNote = null;
+            if (mesh.mergedCount > 1 || mesh.splitFromUuid) {
+                partNote = document.createElement('div');
+                partNote.className = 'part-note';
+                partNote.innerHTML = mesh.splitFromUuid
+                    ? `<i class="bi bi-scissors"></i> Split from ${mesh.name} (one mesh per material)`
+                    : `<i class="bi bi-layers"></i> Merged from ${mesh.mergedCount} meshes (one per material)`;
+            }
+            
             const buttonGroup = document.createElement('div');
             buttonGroup.className = 'btn-group w-100';
             buttonGroup.setAttribute('role', 'group');
@@ -103,7 +161,20 @@ document.addEventListener('alpine:init', () => {
             buttonGroup.appendChild(hideBtn);
             buttonGroup.appendChild(keepBtn);
             
+            if (partNote) {
+                const splitBtn = document.createElement('button');
+                splitBtn.className = 'btn btn-outline-info btn-sm';
+                splitBtn.innerHTML = mesh.splitFromUuid ? '<i class="bi bi-union"></i> Merge' : '<i class="bi bi-scissors"></i> Split';
+                splitBtn.title = mesh.splitFromUuid ? 'Merge back into one part' : 'List each material as a separate part';
+                splitBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.toggleSplit(mesh.uuid);
+                };
+                buttonGroup.appendChild(splitBtn);
+            }
+            
             cardBody.appendChild(meshBtn);
+            if (partNote) cardBody.appendChild(partNote);
             cardBody.appendChild(buttonGroup);
             meshCard.appendChild(cardBody);
             

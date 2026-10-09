@@ -208,6 +208,8 @@ class MeshManager {
     
     // Display name for a part: the original (unsanitised) glTF node name if present
     getPartName(part) {
+        if (part.splitFrom) return this.getPartName(part.splitFrom);
+        
         return part.object.userData.name || part.object.name;
     }
     
@@ -219,6 +221,33 @@ class MeshManager {
         const boxInfo = this.extractBoxFromGeometry(vertices, this.getPartName(part), vertexCount, worldScale);
         
         return boxInfo ? { part, boxInfo, materialName: this.getPartMaterialName(part) } : null;
+    }
+    
+    // Replace a multi-mesh part with one part per mesh
+    splitPart(uuid) {
+        const index = this.parts.findIndex(p => p.object.uuid === uuid);
+        const part = this.parts[index];
+        if (!part || part.meshes.length < 2) return [];
+        
+        const pieces = part.meshes.map(mesh => ({ object: mesh, meshes: [mesh], splitFrom: part }));
+        this.parts.splice(index, 1, ...pieces);
+        pieces.forEach(piece => this.partByMesh.set(piece.object, piece));
+        
+        return pieces;
+    }
+    
+    // Undo splitPart: uuid is the object of the original merged part
+    mergePart(uuid) {
+        const pieces = this.parts.filter(p => p.splitFrom && p.splitFrom.object.uuid === uuid);
+        if (pieces.length === 0) return null;
+        
+        const part = pieces[0].splitFrom;
+        const index = this.parts.indexOf(pieces[0]);
+        this.parts = this.parts.filter(p => !pieces.includes(p));
+        this.parts.splice(index, 0, part);
+        part.meshes.forEach(mesh => this.partByMesh.set(mesh, part));
+        
+        return part;
     }
     
     getPartForMesh(mesh) {

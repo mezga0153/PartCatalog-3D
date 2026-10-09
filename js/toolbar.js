@@ -374,6 +374,13 @@ class ToolbarManager {
         return box.getBoundingSphere(new THREE.Sphere()).radius * 0.5;
     }
     
+    // Snap exploded parts back without animating (e.g. before the part list changes)
+    collapse() {
+        this.activeTweens.forEach(tween => tween.stop());
+        this.originalPositions.forEach((position, object) => object.position.copy(position));
+        this.resetExplodeState();
+    }
+    
     // Forget positions/state from a previously loaded model
     resetExplodeState() {
         this.activeTweens.forEach(tween => tween.stop());
