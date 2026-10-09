@@ -1,8 +1,4 @@
-// Wait for Alpine.js to be ready before initializing
-document.addEventListener('alpine:init', () => {
-    console.log('Alpine.js is ready, initializing viewer...');
-    initializeViewer();
-});
+initializeViewer();
 
 function initializeViewer() {
     const scene = new THREE.Scene();
@@ -67,7 +63,7 @@ function initializeViewer() {
         meshManager.meshVertices.clear();
         
         // Clear UI store
-        const meshStore = Alpine.store('meshStore');
+        const meshStore = window.meshStore;
         if (meshStore) {
             meshStore.meshes = [];
             meshStore.selectedMeshUuid = null;

@@ -44,7 +44,7 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 │   ├── 🔧 mesh-manager.js  # Mesh processing and part analysis
 │   ├── 🖱️ interaction.js   # Mouse/click event handling
 │   ├── 🛠️ toolbar.js       # Explode/reset button functionality
-│   ├── 💾 ui-store.js      # Alpine.js store for UI state
+│   ├── 💾 ui-store.js      # UI state for the parts list
 │   ├── 🎪 popup-manager.js # 3D-anchored popup system
 │   ├── 📁 file-upload-manager.js # Drag & drop file handling
 │   └── 📊 export-manager.js # Excel export functionality
@@ -128,7 +128,6 @@ Perfect for models exported from:
 ## Technology Stack ⚡
 
 - **Three.js** - 3D rendering and model loading
-- **Alpine.js** - Reactive UI state management
 - **Bootstrap** - UI components and styling
 - **TWEEN.js** - Smooth animations
 - **SheetJS** - Excel export functionality
