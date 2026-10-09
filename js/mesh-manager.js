@@ -319,8 +319,17 @@ export class MeshManager {
         
         const scaleFactor = 1000.0;
         
+        // Cut-list orientation: local axes ordered longest first (length, width, thickness)
+        const axes = [0, 1, 2].sort((a, b) => dims[b] - dims[a]);
+        
         return {
             name: meshName || 'Unnamed',
+            size_mm: {
+                length: dims[axes[0]] * scaleFactor,
+                width: dims[axes[1]] * scaleFactor,
+                thickness: dims[axes[2]] * scaleFactor
+            },
+            axes,
             dimensions_units: {
                 x: dims[0].toFixed(3),
                 y: dims[1].toFixed(3),

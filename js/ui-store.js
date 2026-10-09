@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { escapeHtml } from './html.js';
+import { formatSize } from './units.js';
 
 // UI state for the parts list (plain object; keep three.js objects out of reactive proxies)
 export const meshStore = {
@@ -20,7 +21,8 @@ export const meshStore = {
         return {
             uuid: part.object.uuid,
             name: meshData.boxInfo.name,
-            dimensions: `${meshData.boxInfo.dimensions_mm.x} × ${meshData.boxInfo.dimensions_mm.y} × ${meshData.boxInfo.dimensions_mm.z} mm`,
+            size: meshData.boxInfo.size_mm,
+            dimensions: formatSize(meshData.boxInfo.size_mm),
             vertexCount: meshData.boxInfo.vertexCount,
             materialName: meshData.materialName,
             isHidden: false,

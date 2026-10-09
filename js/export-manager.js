@@ -96,9 +96,9 @@ export class ExportManager {
             // Set column widths
             const columnWidths = [
                 { wch: 25 }, // Component Name
+                { wch: 20 }, // Length (mm)
                 { wch: 20 }, // Width (mm)
-                { wch: 20 }, // Height (mm)
-                { wch: 20 }, // Depth (mm)
+                { wch: 20 }, // Thickness (mm)
                 { wch: 30 }, // Full Dimensions
                 { wch: 15 }, // Vertex Count
                 { wch: 25 }, // Material Name
@@ -128,17 +128,13 @@ export class ExportManager {
     
     prepareExportData(keptMeshes) {
         return keptMeshes.map((mesh, index) => {
-            // Parse dimensions from the dimensions string
-            const dimensionsParts = mesh.dimensions.replace(' mm', '').split(' × ');
-            const width = parseFloat(dimensionsParts[0]) || 0;
-            const height = parseFloat(dimensionsParts[1]) || 0;
-            const depth = parseFloat(dimensionsParts[2]) || 0;
+            const round = value => Math.round(value * 10) / 10;
             
             return {
                 'Component Name': mesh.name,
-                'Width (mm)': width,
-                'Height (mm)': height,
-                'Depth (mm)': depth,
+                'Length (mm)': round(mesh.size.length),
+                'Width (mm)': round(mesh.size.width),
+                'Thickness (mm)': round(mesh.size.thickness),
                 'Full Dimensions': mesh.dimensions,
                 'Vertex Count': mesh.vertexCount,
                 'Material Name': mesh.materialName,
