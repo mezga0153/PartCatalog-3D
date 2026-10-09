@@ -293,6 +293,7 @@ class ToolbarManager {
     explodeMeshes() {
         const allMeshes = this.meshManager.getAllMeshes();
         const meshesCenter = this.calculateMeshesCenter(allMeshes);
+        const explodeDistance = this.calculateExplodeDistance(allMeshes);
         
         let completedTweens = 0;
         const totalTweens = allMeshes.length;
@@ -317,7 +318,7 @@ class ToolbarManager {
             }
             
             direction.normalize();
-            direction.multiplyScalar(5.0);
+            direction.multiplyScalar(explodeDistance);
             
             const targetPos = this.originalPositions.get(mesh).clone().add(direction);
             
@@ -361,6 +362,24 @@ class ToolbarManager {
                 this.activeTweens.push(tween);
             }
         });
+    }
+    
+    // Scale the explosion to the model so it works for both metre and millimetre models
+    calculateExplodeDistance(meshes) {
+        const box = new THREE.Box3();
+        meshes.forEach(mesh => box.expandByObject(mesh));
+        if (box.isEmpty()) return 1;
+        
+        return box.getBoundingSphere(new THREE.Sphere()).radius * 0.5;
+    }
+    
+    // Forget positions/state from a previously loaded model
+    resetExplodeState() {
+        this.activeTweens.forEach(tween => tween.stop());
+        this.activeTweens.length = 0;
+        this.originalPositions.clear();
+        this.isExploded = false;
+        this.onImplodeComplete();
     }
     
     calculateMeshesCenter(meshes) {

@@ -96,6 +96,7 @@ function initializeViewer() {
         });
         
         sceneManager.scene.add(model);
+        toolbarManager.resetExplodeState();
         
         // Update title to show loaded file
         document.title = `GLB Box Viewer - ${filename}`;
