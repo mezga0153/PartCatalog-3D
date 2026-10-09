@@ -6,20 +6,18 @@ A Three.js-powered 3D model analyzer that transforms your GLB files into a compr
 
 ## What Does This Thing Do? 🤔
 
-Ever looked at a 3D model and wondered "What parts do I actually need to build this?" Wonder no more! PartCatalog 3D:
+Ever looked at a 3D model and wondered "What parts do I actually need to build this?" Wonder no more! PartCatalog 3D turns a model of panel furniture into a **cut list** you can send to a board-cutting service:
 
-- 🔍 **Dissects your GLB models** into individual components with precise specifications
-- 📏 **Calculates exact dimensions** for each part (because every millimeter counts!)
-- 📊 **Counts vertex data** to understand model complexity
-- 🎨 **Identifies materials** for each component
-- 💥 **Explodes/implodes models** for better visualization of assembly
-- 🖱️ **Interactive part selection** with detailed popup specifications
-- 👁️ **Hide/show components** to focus on specific parts
-- ✅ **Mark parts to keep** for your build list
-- 📊 **Export to Excel** - Generate a complete parts list with dimensions
-- 📁 **Drag & drop file loading** - No more manual file editing!
-- 🎯 **Smart bounding boxes** - Visual feedback for part identification
-- 🎪 **Smooth animations** - Professional TWEEN.js powered transitions
+- 🔍 **Dissects your GLB models** into individual parts, one per object (multi-material parts stay together, and can be split if you want)
+- 📏 **Measures every part** as length × width × thickness, in mm, cm or inches
+- 🔢 **Combines identical parts** into one line with a quantity
+- 🎞️ **Detects edge banding** (L1/L2/W1/W2) and **grain direction** from the model's materials and textures
+- 🗂️ **Groups parts** by material or by assembly (e.g. per cabinet)
+- 🧮 **Totals for ordering** - board area, estimated sheets and banding length per material
+- 📊 **Exports** to Excel, CSV or a printable PDF with a picture of each part
+- ✏️ **Edit inline** - rename parts, change quantities and add notes; edits are remembered per model
+- 💥 **Explode, isolate and measure** - explode the assembly, fade everything but the selection, see dimension lines on the selected part
+- 📁 **Drag & drop** a GLB anywhere on the page, also on phones
 
 ## Perfect For 🎯
 
@@ -33,62 +31,82 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
 ## Project Structure 🏗️
 
 ```
-📁 sketchup_export/
-├── 📄 index.html           # Main HTML file with styles
-├── 📄 viewer.js            # Main application orchestrator
-├── 📄 parse.js             # Command-line GLB parser (Node.js)
-├── 📄 package.json         # Dependencies for parse.js
+📁 PartCatalog-3D/
+├── 📄 index.html                # Page layout, import map and CDN scripts
+├── 📄 viewer.js                 # Main application orchestrator
+├── 📄 demo.glb                  # Demo model (a small SketchUp cabinet)
 ├── 📁 js/
-│   ├── 🎥 scene.js         # Scene setup, lighting, environment
-│   ├── 📹 camera.js        # Camera controls and management
-│   ├── 🔧 mesh-manager.js  # Mesh processing and part analysis
-│   ├── 🖱️ interaction.js   # Mouse/click event handling
-│   ├── 🛠️ toolbar.js       # Explode/reset button functionality
-│   ├── 💾 ui-store.js      # UI state for the parts list
-│   ├── 🎪 popup-manager.js # 3D-anchored popup system
-│   ├── 📁 file-upload-manager.js # Drag & drop file handling
-│   └── 📊 export-manager.js # Excel export functionality
+│   ├── 🎥 scene.js              # Scene setup, lighting, environment
+│   ├── 📹 camera.js             # Camera controls and framing
+│   ├── 📦 loader.js             # GLTF loader with Draco/meshopt support
+│   ├── 🔧 mesh-manager.js       # Part detection, sizes, edge banding and grain analysis
+│   ├── 🪵 grain.js              # Grain direction from texture images
+│   ├── 💾 ui-store.js           # Parts list state, selection and 3D appearance
+│   ├── 📋 parts-table.js        # Sortable, groupable parts table with inline editing
+│   ├── 🧮 summary-panel.js      # Board, sheet and banding totals
+│   ├── ✂️ cut-list.js           # Identical-part grouping, cut-list rows and totals
+│   ├── 📏 units.js              # mm / cm / inch formatting
+│   ├── 📐 dimensions.js         # Dimension lines on the selected part
+│   ├── 🖱️ interaction.js        # Hover and click picking in 3D
+│   ├── 🛠️ toolbar.js            # Open, reset, explode and isolate buttons
+│   ├── 🎪 popup-manager.js      # 3D-anchored popup system
+│   ├── 📁 file-upload-manager.js # File dialog and drag & drop
+│   ├── 📊 export-manager.js     # Excel and CSV export
+│   ├── 🖨️ print.js              # Printable cut list (save as PDF)
+│   ├── 💽 storage.js            # Remembered edits and settings (browser storage)
+│   ├── 🗂️ sidebar.js            # Sidebar tabs and mobile bottom sheet
+│   └── 🛡️ html.js               # HTML escaping helper
 ├── 📁 css/
-│   ├── 🎨 popup.css        # Popup styling
-│   └── 📁 file-upload.css  # File upload dialog styling
-└── 📄 README.md            # You are here! 👋
+│   ├── 📋 parts-panel.css       # Sidebar, table and summary styling
+│   ├── 🎨 popup.css             # Popup styling
+│   └── 📁 file-upload.css       # File upload dialog styling
+└── 📄 README.md                 # You are here! 👋
 ```
 
 ## Features in Detail 🚀
 
 ### 📦 **Part Analysis**
-- Automatically detects individual components in your 3D model
-- Calculates precise dimensions in millimeters
-- Counts vertices to understand model complexity
-- Identifies materials and surface properties
+- One part per object in the model; parts made of several materials are merged into one, with a note and a **Split** button to list each material separately
+- Sizes are measured in each part's own orientation, ordered length × width × thickness, and include any scaling on the model's nodes
+- Works with exporters that share one vertex buffer between all parts (like SketchUp's), which used to make every part look as big as the whole model
+- The **board material** is the one on the two large faces; an edge face in a different material counts as **edge banding**
+- **Grain direction** is read from the board texture and its mapping on the part
+
+### 📋 **Cut List**
+- Compact table: sort by any column, search by name, material or assembly
+- Identical parts (same size, material, banding and grain) are combined with a quantity
+- Group by material or by assembly - taken from the model's hierarchy, or from a shared name prefix like `k1` in `k1 - dol`
+- Tick which parts go in the cut list; excluded parts are ghosted in 3D
+- Double-click a name or quantity to edit it, and add notes - all remembered for the next time you open the same model
+
+### 🧮 **Summary**
+- Board area and part count per material and thickness
+- Estimated full sheets for a configurable sheet size and waste percentage
+- Banded edges and banding length per material
+
+### 📊 **Export**
+- **Excel** with a cut-list sheet (quantity, L/W/T, material, banding per edge, grain, assembly, notes) and a summary sheet
+- **CSV** (UTF-8) for importing into cutting-service tools
+- **Print / PDF** with a picture of each part and a diagram of its banded edges and grain
 
 ### 🎮 **Interactive Visualization**
-- Click any part to see detailed specifications
+- Hover or click a part in 3D to highlight it in the list; hover a row to see the part's bounding box
+- Dimension lines on the selected part
+- Isolate the selection to fade everything else
 - Explode view to see how parts fit together
-- Hide/show individual components
-- Smooth camera controls with orbit, pan, and zoom
-
-### 📋 **Parts Management**
-- Mark components you want to keep for your build
-- Visual indicators for selected and kept parts
-- Real-time parts counter in the sidebar
-
-### 📊 **Export Capabilities**
-- Generate Excel spreadsheets with complete parts lists
-- Include dimensions, vertex counts, and material information
-- Perfect for ordering materials or planning manufacturing
+- Orbit, pan and zoom; the camera frames each model when it loads
 
 ### 💡 **Smart UI**
-- Drag and drop GLB files directly into the viewer
-- Responsive design that works on desktop and mobile
-- Professional-grade visual feedback and animations
+- Drag and drop a GLB anywhere on the page
+- mm, cm or inches (as 1/16" fractions)
+- On phones the sidebar becomes a bottom sheet you can fold away
 
 ## Getting Started 🚀
 
 1. **Clone the repository**
    ```bash
    git clone [your-repo-url]
-   cd sketchup_export
+   cd PartCatalog-3D
    ```
 
 2. **Open in a web server**
@@ -103,19 +121,18 @@ Ever looked at a 3D model and wondered "What parts do I actually need to build t
    ```
 
 3. **Load your GLB file**
-   - Drag and drop a GLB file into the viewer
-   - Or click the upload area to browse for files
+   - Drag and drop a GLB file anywhere on the page
+   - Or click the upload area to browse for files, or try the demo
 
-4. **Analyze your parts**
-   - Click components to see specifications
-   - Use the explode button to see assembly
-   - Mark parts you want to keep
-   - Export your parts list to Excel
+4. **Build your cut list**
+   - Check sizes, banding and grain in the parts table
+   - Untick parts you don't need, adjust names, quantities and notes
+   - Check the totals in the Summary tab
+   - Export to Excel or CSV, or print it
 
 ## Supported Formats 📁
 
-- **GLB** - Primary format (Binary glTF)
-- **GLTF** - Text-based glTF (with separate assets)
+- **GLB** (binary glTF), including Draco- and meshopt-compressed files
 
 Perfect for models exported from:
 - SketchUp
@@ -127,15 +144,15 @@ Perfect for models exported from:
 
 ## Technology Stack ⚡
 
-- **Three.js** - 3D rendering and model loading
+- **Three.js** (r170, ES modules) - 3D rendering and model loading
 - **Bootstrap** - UI components and styling
 - **TWEEN.js** - Smooth animations
 - **SheetJS** - Excel export functionality
-- **Modern JavaScript** - ES6+ features throughout
+- **Modern JavaScript** - ES modules, no build step
 
 ## Browser Support 🌐
 
-Works in all modern browsers that support WebGL
+Works in all modern browsers that support WebGL and import maps
 
 ## License 📄
 
