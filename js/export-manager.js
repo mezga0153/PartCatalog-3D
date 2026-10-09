@@ -1,6 +1,7 @@
 import { meshStore } from './ui-store.js';
 import { cutListRows, summarize } from './cut-list.js';
 import { escapeHtml } from './html.js';
+import { printCutList } from './print.js';
 
 // Export the included parts as a cut list (Excel or CSV)
 export class ExportManager {
@@ -21,6 +22,7 @@ export class ExportManager {
             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
                 <li><button type="button" class="dropdown-item" data-format="xlsx"><i class="bi bi-file-earmark-spreadsheet"></i> Excel (.xlsx)</button></li>
                 <li><button type="button" class="dropdown-item" data-format="csv"><i class="bi bi-filetype-csv"></i> CSV</button></li>
+                <li><button type="button" class="dropdown-item" data-format="print"><i class="bi bi-printer"></i> Print / PDF</button></li>
             </ul>
         `;
         this.exportBtn = this.dropdown.querySelector('[data-bs-toggle]');
@@ -37,6 +39,7 @@ export class ExportManager {
         
         this.dropdown.querySelector('[data-format="xlsx"]').onclick = () => this.exportToXLSX();
         this.dropdown.querySelector('[data-format="csv"]').onclick = () => this.exportToCSV();
+        this.dropdown.querySelector('[data-format="print"]').onclick = () => this.print();
         
         toolbar.appendChild(this.dropdown);
         this.updateButtonState();
@@ -57,8 +60,24 @@ export class ExportManager {
             : `Export cut list (${count} part${count === 1 ? '' : 's'})`;
     }
     
+    getModelName() {
+        return (document.title.split(' - ').slice(1).join(' - ') || 'model').replace(/\.glb$/i, '');
+    }
+    
+    print() {
+        const parts = this.getIncludedParts();
+        if (parts.length === 0) return;
+        
+        try {
+            printCutList(parts, this.getSheetSettings(), this.getModelName());
+        } catch (error) {
+            console.error('Print error:', error);
+            alert('Failed to prepare the printable cut list.');
+        }
+    }
+    
     getFilename(extension) {
-        const model = (document.title.split(' - ').slice(1).join(' - ') || 'model').replace(/\.glb$/i, '');
+        const model = this.getModelName();
         const timestamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
         return `Cut_List_${model.replace(/[^\w-]+/g, '_')}_${timestamp}.${extension}`;
     }
