@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { formatSize } from './units.js';
 import { modelKey, loadEdits, saveEdits } from './storage.js';
 
 // Shared materials for highlighted and excluded parts
@@ -50,7 +49,6 @@ export const meshStore = {
             size: meshData.boxInfo.size_mm,
             // Part-local bounds and which local axes are length, width and thickness
             box: { min: meshData.boxInfo.min, max: meshData.boxInfo.max, axes: meshData.boxInfo.axes },
-            dimensions: formatSize(meshData.boxInfo.size_mm),
             vertexCount: meshData.boxInfo.vertexCount,
             materialName: meshData.materialName,
             allMaterials: meshData.allMaterials,

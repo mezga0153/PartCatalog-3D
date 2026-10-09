@@ -1,6 +1,7 @@
 import { meshStore } from './ui-store.js';
 import { cutListRows, summarize, totalQuantity } from './cut-list.js';
 import { escapeHtml } from './html.js';
+import { toUnit, unitLabel, areaInUnit, areaLabel, runInUnit, runLabel } from './units.js';
 import { printCutList } from './print.js';
 
 // Export the included parts as a cut list (Excel or CSV)
@@ -97,16 +98,16 @@ export class ExportManager {
             const { boards, banding } = summarize(parts, this.getSheetSettings());
             const summary = XLSX.utils.json_to_sheet(boards.map(board => ({
                 'Material': board.material,
-                'Thickness (mm)': board.thickness,
+                [`Thickness (${unitLabel()})`]: toUnit(board.thickness),
                 'Parts': board.count,
-                'Area (m²)': Math.round(board.area * 100) / 100,
+                [`Area (${areaLabel()})`]: Math.round(areaInUnit(board.area) * 100) / 100,
                 'Sheets (estimate)': board.sheets
             })));
             XLSX.utils.sheet_add_json(summary, banding.map(band => ({
                 'Banding': band.material,
                 'Edges': band.count,
-                'Length (m)': Math.round(band.length * 100) / 100,
-                'To order (m)': Math.round(band.toOrder * 10) / 10
+                [`Length (${runLabel()})`]: Math.round(runInUnit(band.length) * 100) / 100,
+                [`To order (${runLabel()})`]: Math.round(runInUnit(band.toOrder) * 10) / 10
             })), { origin: boards.length + 2 });
             summary['!cols'] = [{ wch: 25 }, { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 16 }];
             XLSX.utils.book_append_sheet(workbook, summary, 'Summary');

@@ -1,5 +1,5 @@
 import { escapeHtml } from './html.js';
-import { formatLength } from './units.js';
+import { formatLength, formatLengthWithUnit, formatArea, getUnit, setUnit, unitLabel } from './units.js';
 import { groupIdenticalParts, bandedEdges, totalQuantity, GRAIN_LABELS } from './cut-list.js';
 import { readSetting, writeSetting } from './storage.js';
 
@@ -46,7 +46,8 @@ export class PartsTable {
         this.search = '';
         this.collapsedSections = new Set();
         
-        const settings = readSetting('table', { sortKey: null, sortDir: 1, combineIdentical: true, groupBy: 'none' });
+        const settings = readSetting('table', { sortKey: null, sortDir: 1, combineIdentical: true, groupBy: 'none', unit: 'mm' });
+        setUnit(settings.unit);
         this.sortKey = settings.sortKey;
         this.sortDir = settings.sortDir;
         this.combineIdentical = settings.combineIdentical;
@@ -64,6 +65,13 @@ export class PartsTable {
                 <input type="search" class="form-control form-control-sm parts-search" placeholder="Search name or material">
                 <div class="parts-options">
                     <label class="parts-option"><input type="checkbox" class="form-check-input combine-identical" checked> Combine identical parts</label>
+                    <label class="parts-option">Units
+                        <select class="form-select form-select-sm units">
+                            <option value="mm">mm</option>
+                            <option value="cm">cm</option>
+                            <option value="in">in</option>
+                        </select>
+                    </label>
                     <label class="parts-option">Group by
                         <select class="form-select form-select-sm group-by">
                             <option value="none">None</option>
@@ -108,6 +116,13 @@ export class PartsTable {
         headRow.appendChild(document.createElement('th'));
         
         this.container.querySelector('.group-by').value = this.groupBy;
+        this.container.querySelector('.units').value = getUnit();
+        
+        // Every view shows lengths, so re-render them all
+        this.container.querySelector('.units').addEventListener('change', (event) => {
+            setUnit(event.target.value);
+            this.store.updateUI();
+        });
         this.container.querySelector('.combine-identical').checked = this.combineIdentical;
         
         this.container.querySelector('.group-by').addEventListener('change', (event) => {
@@ -189,7 +204,8 @@ export class PartsTable {
             sortKey: this.sortKey,
             sortDir: this.sortDir,
             combineIdentical: this.combineIdentical,
-            groupBy: this.groupBy
+            groupBy: this.groupBy,
+            unit: getUnit()
         });
     }
     
@@ -224,6 +240,7 @@ export class PartsTable {
             const column = COLUMNS.find(c => c.key === th.dataset.key);
             const arrow = this.sortKey === column.key ? (this.sortDir === 1 ? ' ▲' : ' ▼') : '';
             th.textContent = column.label + arrow;
+            if (['length', 'width', 'thickness'].includes(column.key)) th.title = `Sort by ${column.key} (${unitLabel()})`;
         });
         
         const includedCount = shownEntries.filter(m => m.isIncluded).length;
@@ -264,7 +281,7 @@ export class PartsTable {
             <td colspan="${COLUMNS.length + 2}">
                 <i class="bi ${isCollapsed ? 'bi-chevron-right' : 'bi-chevron-down'}"></i>
                 <span class="section-name" ${fromName ? 'title="Grouped by name prefix"' : ''}>${escapeHtml(section.key)}</span>
-                <span class="section-totals">${totalQuantity(section.entries)} part${totalQuantity(section.entries) === 1 ? '' : 's'} · ${areaOf(included).toFixed(2)} m²</span>
+                <span class="section-totals">${totalQuantity(section.entries)} part${totalQuantity(section.entries) === 1 ? '' : 's'} · ${formatArea(areaOf(included))}</span>
             </td>
         `;
         tr.onclick = () => {
@@ -413,7 +430,7 @@ export class PartsTable {
         const edges = bandedEdges(entry);
         if (edges.length === 0) return '<span class="no-edges" title="No edge banding detected">–</span>';
         
-        const title = edges.map(([name, material, length]) => `${name}: ${material}, ${formatLength(length)} mm`).join('\n');
+        const title = edges.map(([name, material, length]) => `${name}: ${material}, ${formatLengthWithUnit(length)}`).join('\n');
         return `<span title="${escapeHtml(title)}">${edges.map(([name]) => `<span class="edge-tag">${name}</span>`).join('')}</span>`;
     }
     

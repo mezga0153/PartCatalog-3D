@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { escapeHtml } from './html.js';
-import { formatLength } from './units.js';
+import { formatSize, formatLengthWithUnit } from './units.js';
 import { bandedEdges, GRAIN_LABELS } from './cut-list.js';
 
 export class PopupManager {
@@ -49,7 +49,7 @@ export class PopupManager {
             <div class="mesh-popup-title">${escapeHtml(meshData.name)}</div>
             <div class="mesh-popup-info">
                 <span class="mesh-popup-label">Dimensions:</span> 
-                <span class="mesh-popup-value">${meshData.dimensions}</span>
+                <span class="mesh-popup-value">${formatSize(meshData.size)}</span>
             </div>
             <div class="mesh-popup-info">
                 <span class="mesh-popup-label">Vertices:</span> 
@@ -78,7 +78,7 @@ export class PopupManager {
     formatBanding(meshData) {
         const edges = bandedEdges(meshData);
         if (edges.length === 0) return 'none detected';
-        return edges.map(([name, material, length]) => `${name} ${escapeHtml(material)} (${formatLength(length)} mm)`).join(', ');
+        return edges.map(([name, material, length]) => `${name} ${escapeHtml(material)} (${formatLengthWithUnit(length)})`).join(', ');
     }
     
     hidePopup() {

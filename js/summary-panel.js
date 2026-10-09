@@ -1,5 +1,5 @@
 import { escapeHtml } from './html.js';
-import { formatLength } from './units.js';
+import { formatLength, formatArea, toUnit, fromUnit, unitLabel, runInUnit, runLabel } from './units.js';
 import { summarize } from './cut-list.js';
 import { readSetting, writeSetting } from './storage.js';
 
@@ -19,7 +19,7 @@ export class SummaryPanel {
         this.container.innerHTML = `
             <div class="summary-settings">
                 <label>Sheet <input type="number" class="form-control form-control-sm" data-key="length" min="1"> ×
-                    <input type="number" class="form-control form-control-sm" data-key="width" min="1"> mm</label>
+                    <input type="number" class="form-control form-control-sm" data-key="width" min="1"> <span class="sheet-unit"></span></label>
                 <label>Waste <input type="number" class="form-control form-control-sm" data-key="waste" min="0" max="90"> %</label>
             </div>
             <div class="summary-body"></div>
@@ -27,11 +27,11 @@ export class SummaryPanel {
         
         this.body = this.container.querySelector('.summary-body');
         this.container.querySelectorAll('.summary-settings input').forEach(input => {
-            input.value = this.sheet[input.dataset.key];
             input.addEventListener('input', () => {
                 const value = parseFloat(input.value);
                 if (Number.isFinite(value) && value >= 0) {
-                    this.sheet[input.dataset.key] = value;
+                    // Sheet sizes are kept in mm and shown in the current unit
+                    this.sheet[input.dataset.key] = input.dataset.key === 'waste' ? value : fromUnit(value);
                     writeSetting('sheet', this.sheet);
                     this.render();
                 }
@@ -39,7 +39,18 @@ export class SummaryPanel {
         });
     }
     
+    // Show the sheet settings in the current unit (leaving a field being typed in alone)
+    renderSettings() {
+        this.container.querySelector('.sheet-unit').textContent = unitLabel();
+        this.container.querySelectorAll('.summary-settings input').forEach(input => {
+            if (input === document.activeElement) return;
+            const key = input.dataset.key;
+            input.value = key === 'waste' ? this.sheet.waste : toUnit(this.sheet[key]);
+        });
+    }
+    
     render() {
+        this.renderSettings();
         const included = this.store.meshes.filter(m => m.isIncluded);
         if (included.length === 0) {
             this.body.innerHTML = `<div class="parts-empty">${this.store.meshes.length ? 'No parts are included in the cut list.' : 'Load a model to see totals.'}</div>`;
@@ -57,7 +68,7 @@ export class SummaryPanel {
                         <td class="material">${escapeHtml(board.material)}</td>
                         <td class="num">${formatLength(board.thickness)}</td>
                         <td class="num">${board.count}</td>
-                        <td class="num">${board.area.toFixed(2)} m²</td>
+                        <td class="num">${formatArea(board.area)}</td>
                         <td class="num">${board.sheets}</td>
                     </tr>`).join('')}
                 </tbody>
@@ -70,8 +81,8 @@ export class SummaryPanel {
                     <tr>
                         <td class="material">${escapeHtml(band.material)}</td>
                         <td class="num">${band.count}</td>
-                        <td class="num">${band.length.toFixed(2)} m</td>
-                        <td class="num">${band.toOrder.toFixed(1)} m</td>
+                        <td class="num">${runInUnit(band.length).toFixed(2)} ${runLabel()}</td>
+                        <td class="num">${runInUnit(band.toOrder).toFixed(1)} ${runLabel()}</td>
                     </tr>`).join('')}
                 </tbody>
             </table>`}

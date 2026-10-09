@@ -1,4 +1,4 @@
-import { formatSize } from './units.js';
+import { sizeKey } from './units.js';
 
 // Browser storage for per-viewer conveniences; everything still works without it
 const PREFIX = 'partcatalog:';
@@ -30,7 +30,7 @@ function hash(text) {
 
 // Identify a model by its file name and the parts it contains
 export function modelKey(filename, entries) {
-    const fingerprint = entries.map(m => `${m.originalName}|${formatSize(m.size)}`).sort().join(';');
+    const fingerprint = entries.map(m => `${m.originalName}|${sizeKey(m.size)}`).sort().join(';');
     return `model:${filename}:${hash(fingerprint)}`;
 }
 
@@ -38,7 +38,7 @@ export function modelKey(filename, entries) {
 function partKeys(entries) {
     const seen = new Map();
     return entries.map(m => {
-        const base = `${m.originalName}|${formatSize(m.size)}|${m.materialName}`;
+        const base = `${m.originalName}|${sizeKey(m.size)}|${m.materialName}`;
         const n = (seen.get(base) || 0) + 1;
         seen.set(base, n);
         return `${base}#${n}`;

@@ -1,4 +1,4 @@
-import { formatLength } from './units.js';
+import { sizeKey, toUnit, unitLabel } from './units.js';
 
 export const EDGE_NAMES = ['L1', 'L2', 'W1', 'W2'];
 
@@ -16,9 +16,8 @@ export function bandedEdges(entry) {
 
 // Parts that would be cut and banded identically share a signature
 export function partSignature(entry) {
-    const { length, width, thickness } = entry.size;
     const edges = bandedEdges(entry).map(([name, material]) => `${name}=${material}`).join(',');
-    return [formatLength(length), formatLength(width), formatLength(thickness), entry.materialName, edges, entry.grain || ''].join('|');
+    return [sizeKey(entry.size), entry.materialName, edges, entry.grain || ''].join('|');
 }
 
 // Group entries with the same signature, in order of first appearance
@@ -74,9 +73,10 @@ export function summarize(entries, sheet) {
 }
 
 // One row per group of identical parts, in the column layout cutting services
-// commonly import: dimensions in mm, quantity, board, banding per edge, grain.
+// commonly import: dimensions, quantity, board, banding per edge, grain.
+// Dimensions are in the current display unit.
 export function cutListRows(entries) {
-    const round = value => Math.round(value * 10) / 10;
+    const unit = unitLabel();
     
     return groupIdenticalParts(entries.filter(entry => (entry.quantity ?? 1) > 0)).map((group, index) => {
         const entry = group[0];
@@ -86,9 +86,9 @@ export function cutListRows(entries) {
             'No.': index + 1,
             'Part': [...new Set(group.map(m => m.name))].join(', '),
             'Qty': totalQuantity(group),
-            'Length (mm)': round(entry.size.length),
-            'Width (mm)': round(entry.size.width),
-            'Thickness (mm)': round(entry.size.thickness),
+            [`Length (${unit})`]: toUnit(entry.size.length),
+            [`Width (${unit})`]: toUnit(entry.size.width),
+            [`Thickness (${unit})`]: toUnit(entry.size.thickness),
             'Material': entry.materialName,
             'Edge L1': entry.edges?.L1 || '',
             'Edge L2': entry.edges?.L2 || '',

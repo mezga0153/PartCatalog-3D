@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { formatLength } from './units.js';
+import { formatLengthWithUnit, getUnit } from './units.js';
 
 const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffd166, depthTest: false, transparent: true });
 
@@ -34,7 +34,7 @@ export class DimensionOverlay {
     }
     
     labelKey(entry) {
-        return entry ? `${entry.size.length}|${entry.size.width}|${entry.size.thickness}` : null;
+        return entry ? `${entry.size.length}|${entry.size.width}|${entry.size.thickness}|${getUnit()}` : null;
     }
     
     clear() {
@@ -88,7 +88,7 @@ export class DimensionOverlay {
         addDimension(lFrom, lTo, [
             [point({ l: min[l], w: min[w], t: max[t] }), lFrom],
             [point({ l: max[l], w: min[w], t: max[t] }), lTo]
-        ], `${formatLength(entry.size.length)} mm`);
+        ], formatLengthWithUnit(entry.size.length));
         
         // Width along the right top edge
         const wFrom = point({ l: max[l] + offset, w: min[w], t: max[t] });
@@ -96,14 +96,14 @@ export class DimensionOverlay {
         addDimension(wFrom, wTo, [
             [point({ l: max[l], w: min[w], t: max[t] }), wFrom],
             [point({ l: max[l], w: max[w], t: max[t] }), wTo]
-        ], `${formatLength(entry.size.width)} mm`);
+        ], formatLengthWithUnit(entry.size.width));
         
         // Thickness at the back right corner
         const tFrom = point({ l: max[l] + offset, w: min[w] - offset, t: min[t] });
         const tTo = point({ l: max[l] + offset, w: min[w] - offset, t: max[t] });
         addDimension(tFrom, tTo, [
             [point({ l: max[l], w: min[w], t: min[t] }), tFrom]
-        ], `${formatLength(entry.size.thickness)} mm`);
+        ], formatLengthWithUnit(entry.size.thickness));
         
         const lines = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(segments), lineMaterial);
         lines.renderOrder = 999;

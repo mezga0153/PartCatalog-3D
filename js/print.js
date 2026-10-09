@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { escapeHtml } from './html.js';
-import { formatLength } from './units.js';
+import { formatLength, formatArea, unitLabel, runInUnit, runLabel } from './units.js';
 import { groupIdenticalParts, cutListRows, summarize, bandedEdges, totalQuantity } from './cut-list.js';
 
 // Render a small picture of a part on its own, using its own materials
@@ -121,9 +121,9 @@ export function printCutList(allEntries, sheet, modelName) {
                 <td><img src="${thumbnails[i]}" alt=""></td>
                 <td>${escapeHtml(row['Part'])}${row['Assembly'] ? `<br><small>${escapeHtml(row['Assembly'])}</small>` : ''}</td>
                 <td class="num qty">${row['Qty']}</td>
-                <td class="num">${row['Length (mm)']}</td>
-                <td class="num">${row['Width (mm)']}</td>
-                <td class="num">${row['Thickness (mm)']}</td>
+                <td class="num">${formatLength(groups[i][0].size.length)}</td>
+                <td class="num">${formatLength(groups[i][0].size.width)}</td>
+                <td class="num">${formatLength(groups[i][0].size.thickness)}</td>
                 <td>${escapeHtml(row['Material'])}</td>
                 <td>${panelDiagram(groups[i][0])}</td>
                 <td class="edges">${bandedEdges(groups[i][0]).map(([name, material]) => `${name}: ${escapeHtml(material)}`).join('<br>') || '–'}</td>
@@ -131,18 +131,18 @@ export function printCutList(allEntries, sheet, modelName) {
             </tr>`).join('')}
         </tbody>
     </table>
-    <div class="legend">Sizes in mm. Diagram: top view with L horizontal; thick orange edges are banded (L1 top, L2 bottom, W1 left, W2 right); arrow shows grain direction.</div>
+    <div class="legend">Sizes in ${unitLabel()}. Diagram: top view with L horizontal; thick orange edges are banded (L1 top, L2 bottom, W1 left, W2 right); arrow shows grain direction.</div>
     
     <h2>Boards</h2>
     <table>
-        <thead><tr><th>Material</th><th class="num">Thickness</th><th class="num">Parts</th><th class="num">Area</th><th class="num">Sheets (${formatLength(sheet.length)} × ${formatLength(sheet.width)}, +${sheet.waste}%)</th></tr></thead>
-        <tbody>${boards.map(board => `<tr><td>${escapeHtml(board.material)}</td><td class="num">${formatLength(board.thickness)} mm</td><td class="num">${board.count}</td><td class="num">${board.area.toFixed(2)} m²</td><td class="num">${board.sheets}</td></tr>`).join('')}</tbody>
+        <thead><tr><th>Material</th><th class="num">Thickness</th><th class="num">Parts</th><th class="num">Area</th><th class="num">Sheets (${formatLength(sheet.length)} × ${formatLength(sheet.width)} ${unitLabel()}, +${sheet.waste}%)</th></tr></thead>
+        <tbody>${boards.map(board => `<tr><td>${escapeHtml(board.material)}</td><td class="num">${formatLength(board.thickness)} ${unitLabel()}</td><td class="num">${board.count}</td><td class="num">${formatArea(board.area)}</td><td class="num">${board.sheets}</td></tr>`).join('')}</tbody>
     </table>
     ${banding.length ? `
     <h2>Edge banding</h2>
     <table>
         <thead><tr><th>Material</th><th class="num">Edges</th><th class="num">Length</th><th class="num">To order (+${sheet.waste}%)</th></tr></thead>
-        <tbody>${banding.map(band => `<tr><td>${escapeHtml(band.material)}</td><td class="num">${band.count}</td><td class="num">${band.length.toFixed(2)} m</td><td class="num">${band.toOrder.toFixed(1)} m</td></tr>`).join('')}</tbody>
+        <tbody>${banding.map(band => `<tr><td>${escapeHtml(band.material)}</td><td class="num">${band.count}</td><td class="num">${runInUnit(band.length).toFixed(2)} ${runLabel()}</td><td class="num">${runInUnit(band.toOrder).toFixed(1)} ${runLabel()}</td></tr>`).join('')}</tbody>
     </table>` : ''}
 </body></html>`;
     
