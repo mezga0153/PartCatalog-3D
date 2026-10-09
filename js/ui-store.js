@@ -185,9 +185,6 @@ export const meshStore = {
         return this.uuidIndex.get(uuid);
     },
     
-    findMeshByThreeObject(threeObject) {
-        return this.meshes.find(m => m.threeObject === threeObject || m.threeMeshes.includes(threeObject));
-    },
     
     createBoundingBox(mesh) {
         // Calculate bounding box

@@ -15,9 +15,6 @@ import { ExportManager } from './js/export-manager.js';
 initializeViewer();
 
 function initializeViewer() {
-    const scene = new THREE.Scene();
-    // Set a gradient background that complements the environment lighting
-    scene.background = new THREE.Color(0x202040); // Dark blue-gray background
 
     // Calculate canvas size - now full window width
     const canvasWidth = window.innerWidth;
@@ -82,7 +79,6 @@ function initializeViewer() {
         // Clear mesh manager
         meshManager.allMeshes = [];
         meshManager.parts = [];
-        meshManager.boxes = [];
         meshManager.meshVertices.clear();
         
         // Clear UI store
