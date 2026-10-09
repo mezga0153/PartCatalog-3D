@@ -1,4 +1,6 @@
-class ExportManager {
+import { meshStore } from './ui-store.js';
+
+export class ExportManager {
     constructor() {
         // Delay button creation to ensure toolbar exists
         setTimeout(() => {
@@ -53,7 +55,6 @@ class ExportManager {
     updateButtonState() {
         if (!this.exportBtn) return;
         
-        const meshStore = window.meshStore;
         if (!meshStore) return;
         
         const keptMeshes = meshStore.meshes.filter(mesh => mesh.isKept);
@@ -70,7 +71,6 @@ class ExportManager {
     }
     
     exportToXLSX() {
-        const meshStore = window.meshStore;
         if (!meshStore) {
             console.error('Mesh store not available');
             return;

@@ -1,4 +1,7 @@
-class CameraManager {
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+export class CameraManager {
     constructor(canvasWidth, canvasHeight, renderer) {
         this.camera = new THREE.PerspectiveCamera(75, canvasWidth / canvasHeight, 0.1, 1000);
         this.camera.position.set(2, 2, 2);
@@ -7,7 +10,7 @@ class CameraManager {
     }
     
     setupControls(renderer) {
-        this.controls = new THREE.OrbitControls(this.camera, renderer.domElement);
+        this.controls = new OrbitControls(this.camera, renderer.domElement);
         
         // Mouse button configuration
         this.controls.mouseButtons = {

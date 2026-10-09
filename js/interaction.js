@@ -1,4 +1,8 @@
-class InteractionManager {
+import * as THREE from 'three';
+import { meshStore } from './ui-store.js';
+import { PopupManager } from './popup-manager.js';
+
+export class InteractionManager {
     constructor(renderer, camera, meshManager) {
         this.renderer = renderer;
         this.camera = camera;
@@ -75,7 +79,6 @@ class InteractionManager {
         if (intersects.length > 0) {
             const clickedMesh = intersects[0].object;
             console.log('Clicked mesh:', clickedMesh);
-            const meshStore = window.meshStore;
             const part = this.meshManager.getPartForMesh(clickedMesh);
             
             if (meshStore && part) {
@@ -90,7 +93,6 @@ class InteractionManager {
             }
         } else {
             // Clicked on empty space, deselect current mesh and hide popup
-            const meshStore = window.meshStore;
             if (meshStore && meshStore.selectedMeshUuid) {
                 meshStore.deselectCurrentMesh();
             }

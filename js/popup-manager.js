@@ -1,4 +1,7 @@
-class PopupManager {
+import * as THREE from 'three';
+import { escapeHtml } from './html.js';
+
+export class PopupManager {
     constructor(renderer, camera) {
         this.renderer = renderer;
         this.camera = camera;

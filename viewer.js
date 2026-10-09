@@ -1,3 +1,14 @@
+import * as THREE from 'three';
+import { meshStore } from './js/ui-store.js';
+import { SceneManager } from './js/scene.js';
+import { CameraManager } from './js/camera.js';
+import { MeshManager } from './js/mesh-manager.js';
+import { ToolbarManager } from './js/toolbar.js';
+import { InteractionManager } from './js/interaction.js';
+import { FileUploadManager } from './js/file-upload-manager.js';
+import { ExportManager } from './js/export-manager.js';
+import { createGLTFLoader } from './js/loader.js';
+
 initializeViewer();
 
 function initializeViewer() {
@@ -17,8 +28,6 @@ function initializeViewer() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.physicallyCorrectLights = true;
     document.body.appendChild(renderer.domElement);
 
     // Setup environment map
@@ -36,6 +45,7 @@ function initializeViewer() {
     // Used by the UI store to split/merge parts
     window.meshManager = meshManager;
     window.toolbarManager = toolbarManager;
+    window.meshStore = meshStore; // handy for debugging in the console
 
     // Initialize interaction
     const interactionManager = new InteractionManager(renderer, cameraManager.camera, meshManager);
@@ -63,7 +73,6 @@ function initializeViewer() {
         meshManager.meshVertices.clear();
         
         // Clear UI store
-        const meshStore = window.meshStore;
         if (meshStore) {
             meshStore.meshes = [];
             meshStore.selectedMeshUuid = null;
@@ -99,7 +108,7 @@ function initializeViewer() {
 
     // Function to load demo model
     function loadDemoModel() {
-        const loader = new THREE.GLTFLoader();
+        const loader = createGLTFLoader();
         const demoUrl = './demo.glb'; // Load from project root
         
         console.log('Loading demo model...');

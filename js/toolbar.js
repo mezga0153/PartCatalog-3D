@@ -1,4 +1,8 @@
-class ToolbarManager {
+import * as THREE from 'three';
+import { escapeHtml } from './html.js';
+import { createGLTFLoader } from './loader.js';
+
+export class ToolbarManager {
     constructor(cameraManager, meshManager) {
         this.cameraManager = cameraManager;
         this.meshManager = meshManager;
@@ -117,7 +121,7 @@ class ToolbarManager {
                 const url = URL.createObjectURL(blob);
                 
                 // Load the model
-                const loader = new THREE.GLTFLoader();
+                const loader = createGLTFLoader();
                 loader.load(
                     url,
                     (gltf) => {

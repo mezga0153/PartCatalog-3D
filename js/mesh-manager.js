@@ -1,4 +1,6 @@
-class MeshManager {
+import * as THREE from 'three';
+
+export class MeshManager {
     constructor() {
         this.allMeshes = [];
         this.parts = [];

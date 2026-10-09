@@ -1,4 +1,6 @@
-class FileUploadManager {
+import { createGLTFLoader } from './loader.js';
+
+export class FileUploadManager {
     constructor(onFileLoaded) {
         this.onFileLoaded = onFileLoaded;
         this.overlay = null;
@@ -131,7 +133,7 @@ class FileUploadManager {
     }
     
     loadDemo() {
-        const loader = new THREE.GLTFLoader();
+        const loader = createGLTFLoader();
         const demoUrl = './demo.glb'; // Load from project root
         
         this.showProgress();
@@ -184,7 +186,7 @@ class FileUploadManager {
         reader.onload = (event) => {
             try {
                 const arrayBuffer = event.target.result;
-                const loader = new THREE.GLTFLoader();
+                const loader = createGLTFLoader();
                 
                 loader.parse(arrayBuffer, '', (gltf) => {
                     this.hideProgress();

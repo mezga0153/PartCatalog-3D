@@ -1,5 +1,8 @@
+import * as THREE from 'three';
+import { escapeHtml } from './html.js';
+
 // UI state for the parts list (plain object; keep three.js objects out of reactive proxies)
-window.meshStore = {
+export const meshStore = {
     meshes: [],
     selectedMeshUuid: null, // Track currently selected mesh
     hoveredMeshUuid: null, // Track currently hovered mesh
